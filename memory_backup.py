@@ -167,6 +167,11 @@ def _bundle_refs(root: Path) -> list[str]:
     return refs
 
 
+def _is_shallow_repo(root: Path) -> bool:
+    shallow = _run(["git", "rev-parse", "--is-shallow-repository"], cwd=root, check=False)
+    return shallow.returncode == 0 and shallow.stdout.strip().lower() == "true"
+
+
 def _push_backup_ref(root: Path) -> None:
     _run(["git", "push", "memorywiki-local", "HEAD:refs/heads/main"], cwd=root)
 
@@ -189,7 +194,7 @@ def backup_memory(
     _push_backup_ref(memory_root)
     _run(["git", "--git-dir", str(remote), "symbolic-ref", "HEAD", "refs/heads/main"], check=False)
     bundle_path = None
-    if bundle:
+    if bundle and not _is_shallow_repo(memory_root):
         suffix = sha or datetime.now().strftime("%Y%m%d%H%M%S")
         bundle_path = backups / ("%s-%s.bundle" % (safe_name, suffix))
         if bundle_path.exists() and bundle_path.is_symlink():

@@ -188,7 +188,7 @@ def test_memory_backup_accepts_shallow_checkout(tmp_path):
     ).stdout.strip() == "true"
 
     backup_root = tmp_path / "backups"
-    subprocess.run(
+    result = subprocess.run(
         [
             sys.executable,
             "memory_backup.py",
@@ -198,6 +198,8 @@ def test_memory_backup_accepts_shallow_checkout(tmp_path):
             str(backup_root),
             "--name",
             "shallow-memory",
+            "--format",
+            "json",
         ],
         cwd=REPO_ROOT,
         text=True,
@@ -206,7 +208,16 @@ def test_memory_backup_accepts_shallow_checkout(tmp_path):
     )
 
     assert (backup_root / "shallow-memory.git").is_dir()
-    assert next(backup_root.glob("shallow-memory-*.bundle")).is_file()
+    assert '"bundle": null' in result.stdout
+    assert list(backup_root.glob("shallow-memory-*.bundle")) == []
+    restored = tmp_path / "restored"
+    subprocess.run(
+        ["git", "clone", str(backup_root / "shallow-memory.git"), str(restored)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert (restored / "MEMORY.md").read_text(encoding="utf-8") == "# Memory\n"
 
 
 def test_memory_backup_rejects_symlinked_root(tmp_path):
