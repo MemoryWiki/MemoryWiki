@@ -154,6 +154,27 @@ def _commit_if_needed(root: Path, message: str) -> tuple[bool, str]:
     return True, sha
 
 
+def _bundle_refs(root: Path) -> list[str]:
+    refs = ["HEAD"]
+    main = _run(
+        ["git", "rev-parse", "--verify", "--quiet", "main^{commit}"],
+        cwd=root,
+        check=False,
+    )
+    if main.returncode == 0:
+        refs.append("main")
+    return refs
+
+
+def _push_backup_ref(root: Path) -> None:
+    branch = _run(["git", "symbolic-ref", "--short", "-q", "HEAD"], cwd=root, check=False)
+    command = ["git", "push"]
+    if branch.returncode == 0 and branch.stdout.strip():
+        command.append("-u")
+    command.extend(["memorywiki-local", "HEAD:refs/heads/main"])
+    _run(command, cwd=root)
+
+
 def backup_memory(
     root: str | Path,
     backup_root: str | Path = DEFAULT_BACKUP_ROOT,
@@ -169,7 +190,7 @@ def backup_memory(
     committed, sha = _commit_if_needed(memory_root, message)
     if not sha:
         sha = _run(["git", "rev-parse", "--short", "HEAD"], cwd=memory_root, check=False).stdout.strip()
-    _run(["git", "push", "-u", "memorywiki-local", "HEAD:main"], cwd=memory_root)
+    _push_backup_ref(memory_root)
     _run(["git", "--git-dir", str(remote), "symbolic-ref", "HEAD", "refs/heads/main"], check=False)
     bundle_path = None
     if bundle:
@@ -177,7 +198,7 @@ def backup_memory(
         bundle_path = backups / ("%s-%s.bundle" % (safe_name, suffix))
         if bundle_path.exists() and bundle_path.is_symlink():
             raise ValueError("Backup bundle may not be a symlink: %s" % bundle_path)
-        _run(["git", "bundle", "create", str(bundle_path), "HEAD", "main"], cwd=memory_root)
+        _run(["git", "bundle", "create", str(bundle_path), *_bundle_refs(memory_root)], cwd=memory_root)
         if os.name != "nt":
             os.chmod(bundle_path, 0o600)
     return {
