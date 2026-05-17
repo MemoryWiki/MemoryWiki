@@ -167,12 +167,7 @@ def _bundle_refs(root: Path) -> list[str]:
 
 
 def _push_backup_ref(root: Path) -> None:
-    branch = _run(["git", "symbolic-ref", "--short", "-q", "HEAD"], cwd=root, check=False)
-    command = ["git", "push"]
-    if branch.returncode == 0 and branch.stdout.strip():
-        command.append("-u")
-    command.extend(["memorywiki-local", "HEAD:refs/heads/main"])
-    _run(command, cwd=root)
+    _run(["git", "push", "memorywiki-local", "HEAD:refs/heads/main"], cwd=root)
 
 
 def backup_memory(

@@ -67,6 +67,48 @@ def test_memory_backup_noops_when_no_changes(tmp_path):
     assert "No changes" in result.stdout
 
 
+def test_memory_backup_does_not_repoint_existing_upstream(tmp_path):
+    upstream = tmp_path / "upstream.git"
+    subprocess.run(["git", "init", "--bare", str(upstream)], check=True, capture_output=True, text=True)
+    root = tmp_path / "repo"
+    root.mkdir()
+    subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Tester"], cwd=root, check=True)
+    subprocess.run(["git", "config", "user.email", "tester@example.com"], cwd=root, check=True)
+    (root / "MEMORY.md").write_text("# Memory\n", encoding="utf-8")
+    subprocess.run(["git", "add", "MEMORY.md"], cwd=root, check=True)
+    subprocess.run(["git", "commit", "-m", "initial"], cwd=root, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "branch", "-M", "main"], cwd=root, check=True)
+    subprocess.run(["git", "remote", "add", "origin", str(upstream)], cwd=root, check=True)
+    subprocess.run(["git", "push", "-u", "origin", "main"], cwd=root, check=True, capture_output=True, text=True)
+
+    subprocess.run(
+        [
+            sys.executable,
+            "memory_backup.py",
+            "--root",
+            str(root),
+            "--backup-root",
+            str(tmp_path / "backups"),
+            "--name",
+            "upstream-memory",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    upstream_after = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+    assert upstream_after == "origin/main"
+
+
 def test_memory_backup_bundles_detached_head_without_local_main(tmp_path):
     root = tmp_path / "repo"
     root.mkdir()
