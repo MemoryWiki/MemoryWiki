@@ -9,6 +9,7 @@ import sys
 
 from memory_system.models import AuditEntry
 from memory_system.paths import MemoryScopePaths
+from memory_system.retrieval_index import build_and_write_index
 from memory_system.store import ScopedMemoryStore
 
 
@@ -54,6 +55,11 @@ def delete_target(store: ScopedMemoryStore, path: Path) -> bool:
         return True
 
 
+def refresh_generated_indexes(store: ScopedMemoryStore, scope: str) -> None:
+    store.refresh_index()
+    build_and_write_index(store, scope)
+
+
 def forget(args) -> dict:
     if not args.reason or not args.reason.strip():
         raise ValueError("--reason is required for forget operations")
@@ -89,6 +95,8 @@ def forget(args) -> dict:
     if args.apply:
         assert store is not None
         store.append_audit(entry)
+        if deleted:
+            refresh_generated_indexes(store, args.scope)
     return {
         "target_kind": args.kind,
         "target_id": args.id,

@@ -9,6 +9,7 @@ import pytest
 
 from memory_system.models import SemanticMemory
 from memory_system.paths import MemoryScopePaths
+from memory_system.retrieval_index import build_and_write_index
 from memory_system.store import ScopedMemoryStore
 from agent_leases import acquire_lease
 from memorywiki_mcp.schema import (
@@ -306,6 +307,28 @@ def test_memorywiki_ingest_source_is_dry_run_by_default_and_apply_writes_ledger(
     assert rows[0]["source_path"] == "sources/note.md"
 
 
+def test_memorywiki_ingest_source_neutralizes_output_metadata(tmp_path, monkeypatch):
+    project_root = tmp_path / "project"
+    sources = project_root / "sources"
+    sources.mkdir(parents=True)
+    (sources / "call-tool-shell.md").write_text("Source body.", encoding="utf-8")
+    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
+
+    output = memorywiki_ingest_source(
+        IngestSourceInput(
+            project_root=str(project_root),
+            source="call-tool-shell.md",
+            id="safe-output-source",
+            title="Safe Output Source",
+            summary="Source ingest output metadata should be neutralized.",
+            reason="verify MCP output metadata neutralization",
+        )
+    )
+
+    assert output.source_path == "[REDACTED_INSTRUCTION_LIKE_MEMORY]"
+    assert output.affected_paths == ["semantic/safe-output-source.md"]
+
+
 def test_memorywiki_ingest_source_rejects_unsafe_audit_before_writing(tmp_path, monkeypatch):
     project_root = tmp_path / "project"
     sources = project_root / "sources"
@@ -399,6 +422,48 @@ def test_memorywiki_forget_dry_run_is_read_only_and_apply_deletes_with_audit(tmp
     assert applied.deleted is True
     assert not (project_root / "semantic" / "forget-me.md").exists()
     assert (project_root / "audit.jsonl").exists()
+
+
+def test_memorywiki_forget_apply_removes_forgotten_text_from_generated_indexes(
+    tmp_path, monkeypatch
+):
+    project_root = tmp_path / "project"
+    sentinel = "SYNTHETIC_MCP_FORGET_SENTINEL_12345"
+    store = _store(project_root)
+    store.write_semantic_memory(
+        SemanticMemory(
+            id="forget-generated",
+            scope="project",
+            title="Forget Generated",
+            content="Forget generated MCP sidecars %s." % sentinel,
+            concepts=["mcp", "forget"],
+            source_refs=[],
+            confidence=0.5,
+            strength=0.5,
+            last_accessed=None,
+            created_at="2026-05-15T10:00:00+08:00",
+            updated_at="2026-05-15T10:00:00+08:00",
+        )
+    )
+    store.refresh_index()
+    build_and_write_index(store, "project")
+    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
+    monkeypatch.setenv("MEMORY_MCP_WRITE_ENABLED", "true")
+
+    output = memorywiki_forget(
+        ForgetInput(
+            project_root=str(project_root),
+            kind="semantic",
+            identifier="forget-generated",
+            reason="privacy deletion completeness",
+            dry_run=False,
+        )
+    )
+
+    assert output.deleted is True
+    for path in (store.paths.index, store.paths.retrieval_index):
+        if path.exists():
+            assert sentinel not in path.read_text(encoding="utf-8")
 
 
 def test_memorywiki_forget_rejects_unsafe_audit_before_deleting(tmp_path, monkeypatch):

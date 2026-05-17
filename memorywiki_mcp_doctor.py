@@ -18,6 +18,7 @@ WARN_GATES = (
     "MEMORY_GLOBAL_WRITE_ENABLED",
     "MEMORY_MCP_ALLOW_ROOT_OVERRIDE",
 )
+PYTHON_CHECK_TIMEOUT_SECONDS = 10
 
 
 def _repo_root() -> Path:
@@ -56,7 +57,11 @@ def _load_mcp_config(path: Path) -> dict[str, Any] | None:
     return payload
 
 
-def _check_python(python: str, repo_root: Path) -> dict[str, Any]:
+def _check_python(
+    python: str,
+    repo_root: Path,
+    timeout_seconds: float = PYTHON_CHECK_TIMEOUT_SECONDS,
+) -> dict[str, Any]:
     expanded = os.path.expanduser(python)
     has_path_separator = os.sep in expanded or (os.altsep is not None and os.altsep in expanded)
     resolved_command = shutil.which(expanded) if not has_path_separator else None
@@ -67,13 +72,20 @@ def _check_python(python: str, repo_root: Path) -> dict[str, Any]:
         return _check("warn", ["Python command is not a file: %s" % python])
     env = dict(os.environ)
     env["PYTHONPATH"] = str(repo_root)
-    result = subprocess.run(
-        [str(path), "-c", "import memorywiki_mcp; import mcp"],
-        cwd=repo_root,
-        env=env,
-        text=True,
-        capture_output=True,
-    )
+    try:
+        result = subprocess.run(
+            [str(path), "-c", "import memorywiki_mcp; import mcp"],
+            cwd=repo_root,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired:
+        return _check(
+            "warn",
+            ["Python import check timed out after %.1f seconds: %s" % (timeout_seconds, python)],
+        )
     if result.returncode != 0:
         return _check(
             "warn",

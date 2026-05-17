@@ -5,6 +5,7 @@ from pathlib import Path
 
 from memory_system.models import SemanticMemory
 from memory_system.paths import MemoryScopePaths
+from memory_system.retrieval_index import build_and_write_index
 from memory_system.store import ScopedMemoryStore
 
 
@@ -169,6 +170,48 @@ def test_forget_apply_deletes_target_and_records_audit(tmp_path):
     assert audit[-1].action == "forget"
     assert audit[-1].target_kind == "semantic"
     assert audit[-1].dry_run is False
+
+
+def test_forget_apply_removes_forgotten_text_from_generated_indexes(tmp_path):
+    project_root = tmp_path / "project"
+    store = _store(project_root)
+    sentinel = "SYNTHETIC_FORGET_SENTINEL_12345"
+    _write_semantic(store, memory_id="forgotten-secret")
+    item = store.read_semantic_memory("forgotten-secret")
+    item.content = "Forget generated sidecars %s." % sentinel
+    store.write_semantic_memory(item)
+    store.refresh_index()
+    build_and_write_index(store, "project")
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "memory_forget.py",
+            "--root",
+            str(project_root),
+            "--scope",
+            "project",
+            "--kind",
+            "semantic",
+            "--id",
+            "forgotten-secret",
+            "--reason",
+            "privacy deletion completeness",
+            "--apply",
+            "--format",
+            "json",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    payload = json.loads(result.stdout)
+
+    assert payload["deleted"] is True
+    for path in (store.paths.index, store.paths.retrieval_index):
+        if path.exists():
+            assert sentinel not in path.read_text(encoding="utf-8")
 
 
 def test_forget_rejects_path_traversal_id(tmp_path):

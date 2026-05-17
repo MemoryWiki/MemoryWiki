@@ -598,12 +598,11 @@ def verify_manifest(manifest_path: str | Path) -> dict[str, Any]:
         artifact = artifacts.get(label)
         if not artifact:
             continue
-        if artifact.get("path_kind") == "external-basename":
-            checks.append({"target": label, "status": "reference-only"})
+        try:
+            artifact_path = _resolve_manifest_artifact_path(artifact, repo, path)
+        except ValueError as exc:
+            checks.append({"target": label, "status": "unsafe", "error": str(exc)})
             continue
-        artifact_path = Path(str(artifact.get("path", ""))).expanduser()
-        if not artifact_path.is_absolute():
-            artifact_path = repo / artifact_path
         if not artifact_path.exists() or artifact_path.is_symlink() or not artifact_path.is_file():
             checks.append({"target": label, "status": "missing"})
             continue
@@ -623,7 +622,7 @@ def verify_manifest(manifest_path: str | Path) -> dict[str, Any]:
         )
     status = (
         "ok"
-        if all(check["status"] in {"ok", "reference-only"} for check in checks)
+        if all(check["status"] == "ok" for check in checks)
         else "fail"
     )
     return {
@@ -631,6 +630,20 @@ def verify_manifest(manifest_path: str | Path) -> dict[str, Any]:
         "manifest_path": str(path),
         "checks": checks,
     }
+
+
+def _resolve_manifest_artifact_path(artifact: dict[str, Any], repo: Path, manifest_path: Path) -> Path:
+    public_path = str(artifact.get("path", ""))
+    if not public_path:
+        raise ValueError("Manifest artifact path is empty")
+    if artifact.get("path_kind") == "external-basename":
+        if Path(public_path).name != public_path:
+            raise ValueError("External artifact path must be a basename: %s" % public_path)
+        return manifest_path.parent / public_path
+    artifact_path = Path(public_path).expanduser()
+    if artifact_path.is_absolute():
+        return artifact_path
+    return repo / artifact_path
 
 
 def _resolve_manifest_repo_root(

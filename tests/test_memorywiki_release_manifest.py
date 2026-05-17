@@ -206,6 +206,50 @@ def test_release_manifest_verify_detects_tampered_skill_archive(tmp_path):
     assert any(check["target"] == "skill_archive" for check in verify["checks"])
 
 
+def test_release_manifest_verify_checks_external_artifact_hashes(tmp_path):
+    repo, memorywiki = _seed_repo(tmp_path)
+    skill = tmp_path / "memorywiki-v0.1.0.skill"
+    skill.write_text("skill archive bytes\n", encoding="utf-8")
+    path = write_manifest(
+        out=tmp_path / "manifest.json",
+        repo_root=repo,
+        memorywiki_root=memorywiki,
+        skill_archive=skill,
+        release_check={"status": "ok", "results": []},
+    )
+
+    skill.write_text("tampered external archive\n", encoding="utf-8")
+    verify = verify_manifest(path)
+
+    assert verify["status"] == "fail"
+    assert any(
+        check["target"] == "skill_archive" and check["status"] == "changed"
+        for check in verify["checks"]
+    )
+
+
+def test_release_manifest_verify_fails_missing_external_artifact(tmp_path):
+    repo, memorywiki = _seed_repo(tmp_path)
+    skill = tmp_path / "memorywiki-v0.1.0.skill"
+    skill.write_text("skill archive bytes\n", encoding="utf-8")
+    path = write_manifest(
+        out=tmp_path / "manifest.json",
+        repo_root=repo,
+        memorywiki_root=memorywiki,
+        skill_archive=skill,
+        release_check={"status": "ok", "results": []},
+    )
+
+    skill.unlink()
+    verify = verify_manifest(path)
+
+    assert verify["status"] == "fail"
+    assert any(
+        check["target"] == "skill_archive" and check["status"] == "missing"
+        for check in verify["checks"]
+    )
+
+
 def test_release_manifest_uses_public_safe_paths_for_external_artifacts(tmp_path):
     repo, memorywiki = _seed_repo(tmp_path)
     skill = tmp_path / "memorywiki-v0.1.0.skill"

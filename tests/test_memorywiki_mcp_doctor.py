@@ -6,7 +6,9 @@ import platform
 from pathlib import Path
 import stat
 
-from memorywiki_mcp_doctor import run_doctor
+import pytest
+
+from memorywiki_mcp_doctor import _check_python, run_doctor
 from memorywiki_mcp.client_config import build_mcp_json
 
 
@@ -82,6 +84,19 @@ def test_mcp_doctor_resolves_python_command_from_path(tmp_path, monkeypatch):
     )
 
     assert payload["checks"]["python"]["status"] == "ok"
+
+
+def test_mcp_doctor_times_out_hanging_python_check(tmp_path):
+    if platform.system() == "Windows":
+        pytest.skip("POSIX shell sleep probe")
+    slow_python = tmp_path / "slow-python"
+    slow_python.write_text("#!/bin/sh\nsleep 5\n", encoding="utf-8")
+    slow_python.chmod(slow_python.stat().st_mode | stat.S_IXUSR)
+
+    result = _check_python(str(slow_python), REPO_ROOT, timeout_seconds=0.2)
+
+    assert result["status"] == "warn"
+    assert "timed out" in "\n".join(result["messages"])
 
 
 def test_mcp_doctor_warns_when_config_enables_write_gates(tmp_path):

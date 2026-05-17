@@ -2,6 +2,9 @@ import subprocess
 import sys
 from pathlib import Path
 import os
+import stat
+
+import pytest
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -315,3 +318,39 @@ def test_memory_backup_disables_existing_bare_remote_external_hooks(tmp_path):
     ).stdout.strip()
     assert configured_hooks == str(remote / ".memorywiki-disabled-hooks")
     assert not marker.exists()
+
+
+def test_memory_backup_rejects_symlink_inside_existing_remote_before_chmod(tmp_path):
+    if os.name == "nt":
+        pytest.skip("symlink permission behavior is platform-dependent on Windows")
+    root = tmp_path / "memory"
+    root.mkdir()
+    (root / "MEMORY.md").write_text("# Memory\n\n- checkpoint me\n", encoding="utf-8")
+    backup_root = tmp_path / "remotes"
+    remote = backup_root / "demo-memory.git"
+    remote.parent.mkdir()
+    subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True, text=True)
+    victim = tmp_path / "victim.txt"
+    victim.write_text("keep mode\n", encoding="utf-8")
+    victim.chmod(0o644)
+    (remote / "evil-symlink").symlink_to(victim)
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "memory_backup.py",
+            "--root",
+            str(root),
+            "--backup-root",
+            str(backup_root),
+            "--name",
+            "demo-memory",
+        ],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0
+    assert "symlink" in result.stderr
+    assert stat.S_IMODE(victim.stat().st_mode) == 0o644

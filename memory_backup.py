@@ -112,12 +112,26 @@ def _ensure_remote_hooks_disabled(remote: Path) -> None:
     _run(["git", "--git-dir", str(remote), "config", "--local", "core.hooksPath", str(hooks_dir)])
 
 
+def _assert_no_symlink_tree(root: Path, label: str) -> None:
+    for current, dirs, files in os.walk(root):
+        current_path = Path(current)
+        for dirname in dirs:
+            child = current_path / dirname
+            if child.is_symlink():
+                raise ValueError("%s may not contain symlinks: %s" % (label, child))
+        for filename in files:
+            child = current_path / filename
+            if child.is_symlink():
+                raise ValueError("%s may not contain symlinks: %s" % (label, child))
+
+
 def _ensure_remote(root: Path, backup_root: Path, name: str) -> Path:
     remote = backup_root / ("%s.git" % name)
     if not remote.exists():
         _run(["git", "init", "--bare", str(remote)])
     elif remote.is_symlink() or not remote.is_dir():
         raise ValueError("Backup remote must be a real directory: %s" % remote)
+    _assert_no_symlink_tree(remote, "Backup remote")
     _ensure_remote_hooks_disabled(remote)
     _run(["git", "--git-dir", str(remote), "config", "--local", "receive.shallowUpdate", "true"])
     if os.name != "nt":

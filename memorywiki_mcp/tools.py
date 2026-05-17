@@ -25,6 +25,7 @@ from memory_system.models import (
     SourceRef,
 )
 from memory_system.paths import MemoryScopePaths
+from memory_system.retrieval_index import build_and_write_index
 from memory_system.store import ScopedMemoryStore
 from session_summary import save_summary
 from memorywiki_mcp.safety import (
@@ -57,6 +58,10 @@ from memorywiki_mcp.schema import (
 
 
 MAX_SOURCE_BYTES = 2_000_000
+MAX_OUTPUT_REFS = 12
+MAX_OUTPUT_UPDATE_LOG_ITEMS = 20
+MAX_OUTPUT_REF_FIELD_CHARS = 500
+MAX_OUTPUT_METADATA_TEXT_CHARS = 1_000
 
 
 def _now() -> str:
@@ -143,6 +148,63 @@ def _source_refs_from_input(
     ]
 
 
+def _safe_clipped(value: str | None, max_chars: int = MAX_OUTPUT_METADATA_TEXT_CHARS) -> str | None:
+    if value is None:
+        return None
+    text, _ = clipped_output(str(value), max_chars)
+    return text
+
+
+def _source_ref_output(ref: SourceRef) -> dict[str, Any]:
+    return {
+        "kind": _safe_clipped(ref.kind, 80) or "",
+        "path": _safe_clipped(ref.path, MAX_OUTPUT_REF_FIELD_CHARS) or "",
+        "identifier": _safe_clipped(ref.identifier, 240),
+        "excerpt": _safe_clipped(ref.excerpt, MAX_OUTPUT_REF_FIELD_CHARS),
+    }
+
+
+def _source_refs_output(refs: list[SourceRef]) -> list[dict[str, Any]]:
+    rows = [_source_ref_output(ref) for ref in refs[:MAX_OUTPUT_REFS]]
+    if len(refs) > MAX_OUTPUT_REFS:
+        rows.append(
+            {
+                "kind": "metadata",
+                "path": "[TRUNCATED_SOURCE_REFS:%s]" % (len(refs) - MAX_OUTPUT_REFS),
+                "identifier": None,
+                "excerpt": None,
+            }
+        )
+    return rows
+
+
+def _text_list_output(
+    entries: list[str],
+    max_items: int = MAX_OUTPUT_UPDATE_LOG_ITEMS,
+    max_chars: int = MAX_OUTPUT_METADATA_TEXT_CHARS,
+) -> list[str]:
+    rows = [(_safe_clipped(entry, max_chars) or "") for entry in entries[:max_items]]
+    if len(entries) > max_items:
+        rows.append("[TRUNCATED_ITEMS:%s]" % (len(entries) - max_items))
+    return rows
+
+
+def _json_metadata_output(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            safe_output_text(str(key))[:128]: _json_metadata_output(item)
+            for key, item in list(value.items())[:50]
+        }
+    if isinstance(value, list):
+        rows = [_json_metadata_output(item) for item in value[:MAX_OUTPUT_UPDATE_LOG_ITEMS]]
+        if len(value) > MAX_OUTPUT_UPDATE_LOG_ITEMS:
+            rows.append("[TRUNCATED_ITEMS:%s]" % (len(value) - MAX_OUTPUT_UPDATE_LOG_ITEMS))
+        return rows
+    if isinstance(value, (bool, int, float)) or value is None:
+        return value
+    return _safe_clipped(str(value), MAX_OUTPUT_METADATA_TEXT_CHARS)
+
+
 def _target_path(store: ScopedMemoryStore, kind: str, identifier: str) -> Path:
     return _target_path_for_paths(store.paths, kind, identifier)
 
@@ -171,7 +233,7 @@ def _frontmatter_for_semantic(item: SemanticMemory) -> dict[str, Any]:
             "last_accessed": item.last_accessed,
             "created_at": item.created_at,
             "updated_at": item.updated_at,
-            "source_refs": [asdict(ref) for ref in item.source_refs],
+            "source_refs": _source_refs_output(item.source_refs),
         }
     )
 
@@ -189,7 +251,7 @@ def _frontmatter_for_procedure(item: ProceduralMemory) -> dict[str, Any]:
             "last_accessed": item.last_accessed,
             "created_at": item.created_at,
             "updated_at": item.updated_at,
-            "source_refs": [asdict(ref) for ref in item.source_refs],
+            "source_refs": _source_refs_output(item.source_refs),
         }
     )
 
@@ -246,7 +308,7 @@ def memorywiki_read_memory(input_model: ReadMemoryInput) -> ReadMemoryOutput:
             return ReadMemoryOutput(found=False, scope=scope, kind=kind, identifier=identifier)
         content = item.content
         frontmatter = _frontmatter_for_semantic(item)
-        update_log = [safe_output_text(entry) for entry in item.update_log]
+        update_log = _text_list_output(item.update_log)
         found_identifier = item.id
     elif kind == "procedural":
         if not identifier:
@@ -320,7 +382,7 @@ def memorywiki_recall(input_model: RecallInput) -> RecallOutput:
     result = recall_memory(args)
     hits = []
     for hit in result.hits:
-        explanation = safe_json(hit.score_explanation) if input_model.explain_score else {}
+        explanation = _json_metadata_output(hit.score_explanation) if input_model.explain_score else {}
         hits.append(
             RecallHitOutput(
                 scope=safe_output_text(hit.scope),
@@ -330,12 +392,12 @@ def memorywiki_recall(input_model: RecallInput) -> RecallOutput:
                 excerpt=safe_output_text(hit.excerpt),
                 score=round(hit.score, 4),
                 tokens=hit.tokens,
-                provenance=safe_json([asdict(ref) for ref in hit.provenance]),
+                provenance=_source_refs_output(hit.provenance),
                 score_explanation=explanation,
             )
         )
     return RecallOutput(
-        query=input_model.query,
+        query=safe_output_text(input_model.query),
         strategy=result.strategy,
         tokens_used=result.tokens_used,
         truncated=result.truncated,
@@ -419,10 +481,10 @@ def memorywiki_write_session(input_model: WriteSessionInput) -> WriteSessionOutp
     )
     store.refresh_index()
     return WriteSessionOutput(
-        scope=input_model.scope,
-        session_id=session.session_id,
+        scope=safe_output_text(input_model.scope),
+        session_id=safe_output_text(session.session_id),
         dry_run=False,
-        affected_paths=affected,
+        affected_paths=[safe_output_text(path) for path in affected],
     )
 
 
@@ -522,11 +584,11 @@ def memorywiki_crystallize(input_model: CrystallizeInput) -> CrystallizeOutput:
         )
         store.refresh_index()
     return CrystallizeOutput(
-        scope=input_model.scope,
-        kind=input_model.kind,
-        id=input_model.id,
+        scope=safe_output_text(input_model.scope),
+        kind=safe_output_text(input_model.kind),
+        id=safe_output_text(input_model.id),
         dry_run=input_model.dry_run,
-        affected_paths=[affected_path],
+        affected_paths=[safe_output_text(affected_path)],
         replaced=replaced,
     )
 
@@ -697,12 +759,12 @@ def memorywiki_ingest_source(input_model: IngestSourceInput) -> IngestSourceOutp
         )
         store.refresh_index()
     return IngestSourceOutput(
-        scope=input_model.scope,
-        source_path=ref.path,
+        scope=safe_output_text(input_model.scope),
+        source_path=safe_output_text(ref.path),
         source_sha256=digest,
         source_bytes=len(raw),
         dry_run=input_model.dry_run,
-        affected_paths=affected_paths,
+        affected_paths=[safe_output_text(path) for path in affected_paths],
     )
 
 
@@ -721,13 +783,13 @@ def memorywiki_forget(input_model: ForgetInput) -> ForgetOutput:
     )
     if store is None:
         return ForgetOutput(
-            scope=input_model.scope,
-            kind=input_model.kind,
-            identifier=input_model.identifier,
+            scope=safe_output_text(input_model.scope),
+            kind=safe_output_text(input_model.kind),
+            identifier=safe_output_text(input_model.identifier),
             dry_run=input_model.dry_run,
             existed=False,
             deleted=False,
-            affected_paths=[relative],
+            affected_paths=[safe_output_text(relative)],
         )
     target = _target_path(store, input_model.kind, input_model.identifier)
     store._assert_safe_managed_path(target)
@@ -753,12 +815,14 @@ def memorywiki_forget(input_model: ForgetInput) -> ForgetOutput:
             details={"path": relative, "existed": existed, "deleted": deleted},
         )
         store.refresh_index()
+        if deleted:
+            build_and_write_index(store, input_model.scope)
     return ForgetOutput(
-        scope=input_model.scope,
-        kind=input_model.kind,
-        identifier=input_model.identifier,
+        scope=safe_output_text(input_model.scope),
+        kind=safe_output_text(input_model.kind),
+        identifier=safe_output_text(input_model.identifier),
         dry_run=input_model.dry_run,
         existed=existed,
         deleted=deleted,
-        affected_paths=[relative],
+        affected_paths=[safe_output_text(relative)],
     )
