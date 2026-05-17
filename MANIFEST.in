@@ -4,6 +4,7 @@ recursive-include docs *
 recursive-include examples *
 recursive-include benchmarks *
 recursive-exclude * __pycache__ *.py[cod] .DS_Store
+prune examples/memory-root/agent_slots
 prune .git
 prune .pytest_cache
 prune build

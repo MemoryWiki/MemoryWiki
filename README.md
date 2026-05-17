@@ -75,6 +75,9 @@ OpenAI backend is installed separately:
 python3 -m pip install -e ".[openai]"
 ```
 
+More install paths, including GitHub tag installs and clean-room checks, are in
+`docs/install.md`.
+
 ## Architecture
 
 ```mermaid
@@ -187,6 +190,13 @@ MEMORY_MCP_ALLOW_ROOT_OVERRIDE=true # allows tool-provided root overrides
 Keep these off unless the user explicitly asks to save, ingest, forget, or write
 global memory.
 
+Client setup guides:
+
+- `docs/clients/generic-mcp.md`
+- `docs/clients/codex.md`
+- `docs/clients/claude-desktop.md`
+- `docs/clients/cursor.md`
+
 ## How It Compares
 
 | Approach | Local files | Agent recall | Provenance | Conflict history | MCP | Delete workflow |
@@ -209,6 +219,7 @@ See:
 
 - `docs/benchmarks/mini-benchmark-results.md`
 - `docs/demo-cross-project-recall.md`
+- `docs/demo-60-second-script.md`
 
 These are small smoke-style examples, not a substitute for LongMemEval or a
 large retrieval benchmark.
@@ -231,6 +242,8 @@ Public-release preparation lives in:
 - `CONTRIBUTING.md`
 - `CODE_OF_CONDUCT.md`
 - `CHANGELOG.md`
+- `docs/faq.md`
+- `docs/first-week-feedback.md`
 - `docs/launch/github-publication-checklist.md`
 - `docs/launch/public-go-live-runbook.md`
 - `docs/launch/release-playbook.md`

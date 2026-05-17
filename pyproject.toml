@@ -67,11 +67,21 @@ memorywiki-wake-prompt = "generate_wake_prompt:main"
 ]
 "memorywiki/docs" = [
   "docs/demo-cross-project-recall.md",
+  "docs/demo-60-second-script.md",
+  "docs/faq.md",
+  "docs/first-week-feedback.md",
+  "docs/install.md",
   "docs/memory_review_followups.md",
   "docs/memorywiki-golden-cases.json",
   "docs/memorywiki-mcp-client-setup.md",
   "docs/memorywiki-mcp-v1-contract.json",
   "docs/memorywiki-mcp-v1-spec.md",
+]
+"memorywiki/docs/clients" = [
+  "docs/clients/claude-desktop.md",
+  "docs/clients/codex.md",
+  "docs/clients/cursor.md",
+  "docs/clients/generic-mcp.md",
 ]
 "memorywiki/docs/benchmarks" = [
   "docs/benchmarks/mini-benchmark-results.md",

@@ -47,6 +47,8 @@ python3 -m pip install -e .
 python3 -m pip install -e ".[openai]"
 ```
 
+更多安装方式，包括 GitHub tag 安装和 clean-room 检查，见 `docs/install.md`。
+
 ## 记忆目录结构
 
 项目记忆通常放在：
@@ -150,6 +152,13 @@ MEMORY_MCP_ALLOW_ROOT_OVERRIDE=true
 
 除非用户明确要求保存、ingest、forget 或写 global memory，否则不要打开这些闸门。
 
+客户端接入指南：
+
+- `docs/clients/generic-mcp.md`
+- `docs/clients/codex.md`
+- `docs/clients/claude-desktop.md`
+- `docs/clients/cursor.md`
+
 ## 知识形成
 
 MemoryWiki 有三条显式写入路径：
@@ -198,6 +207,7 @@ PYTHONPATH=. python3 benchmarks/mini_recall_benchmark.py --format markdown
 
 - `docs/benchmarks/mini-benchmark-results.md`
 - `docs/demo-cross-project-recall.md`
+- `docs/demo-60-second-script.md`
 
 ## 测试
 
@@ -213,6 +223,8 @@ python3 -m pytest tests -q
 - `CONTRIBUTING.md`
 - `CODE_OF_CONDUCT.md`
 - `CHANGELOG.md`
+- `docs/faq.md`
+- `docs/first-week-feedback.md`
 - `docs/launch/github-publication-checklist.md`
 - `docs/launch/public-go-live-runbook.md`
 - `docs/launch/release-playbook.md`

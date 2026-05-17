@@ -15,6 +15,17 @@ retrieval-quality improvements from real feedback.
   it.
 - Fix install, MCP setup, and docs confusion before adding major new features.
 
+## v0.1.1: first-user feedback loop
+
+- Treat install failures, MCP client setup confusion, privacy concerns, and
+  example-memory gaps as release blockers.
+- Keep code changes small: docs, examples, packaging metadata, and targeted bug
+  fixes only.
+- Turn repeated questions into `docs/faq.md`, then link the relevant answer from
+  Issues and Discussions.
+- Defer new architecture until at least three independent user reports identify
+  the same limitation.
+
 ## 30 to 60 days: developer adoption
 
 - Add client-specific MCP setup guides for common coding-agent environments.
