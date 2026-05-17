@@ -22,9 +22,13 @@ from the local machine.
 ## 3. Repository Setup
 
 - Add description: `Local-first Memory Wiki for AI agents`.
+- Add homepage: `https://github.com/MemoryWiki/MemoryWiki` until a dedicated
+  landing page exists.
 - Add topics: `agent-memory`, `local-first`, `mcp`, `knowledge-management`,
   `pkm`, `llm`, `retrieval`, `markdown`, `ai-agents`, `mcp-server`,
   `markdown-notes`, `local-ai`.
+- Update the account profile before public launch: avatar, name, bio, website,
+  and pinned repository.
 - Enable Issues, Pull Requests, Discussions, secret scanning, push protection,
   Dependabot alerts, and Dependabot updates.
 - Prefer squash merges and automatic branch deletion.
@@ -34,8 +38,12 @@ Current private-repo status:
 
 - Description, topics, Issues, Discussions, squash-only merge, and automatic
   branch deletion are configured.
+- Repository homepage is configured to the GitHub repository URL.
 - Wiki and Projects are disabled.
 - Dependabot vulnerability alerts are enabled.
+- Account avatar/social preview/profile fields are prepared in
+  `docs/launch/github-profile-and-assets.md`; applying avatar/profile changes
+  requires GitHub Settings or a token with `user` scope.
 - Branch protection, secret scanning, push protection, and private
   vulnerability reporting must be rechecked after the repository is public or
   account-plan support is available.
@@ -70,6 +78,8 @@ Current private-repo status:
 ## 7. Launch Assets
 
 - 20-second terminal GIF.
+- 400x400 GitHub avatar.
+- 1280x640 GitHub social preview.
 - Architecture diagram showing local files, CLI, MCP, and write gates.
 - Screenshot of recall output with provenance or warnings.
 - One five-command demo that requires no hosted service and no API key.
@@ -77,7 +87,10 @@ Current private-repo status:
 Prepared assets:
 
 - `docs/assets/memorywiki-quickstart.gif`
+- `docs/assets/memorywiki-avatar.png`
+- `docs/assets/memorywiki-social-preview.png`
 - `docs/assets/recall-output.svg`
+- `docs/launch/github-profile-and-assets.md`
 - `docs/launch/demo-assets.md`
 - `docs/launch/launch-copy.md`
 - `docs/launch/v0.1.0-release-notes.md`

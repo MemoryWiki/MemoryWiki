@@ -5,13 +5,16 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 ![Status](https://img.shields.io/badge/status-v0.1.0%20candidate-orange)
 
-Local-first, Markdown-native memory for AI agents that you can grep, diff, back
-up, and delete.
+Local-first, Markdown-native memory for AI agents: **grep it, diff it, back it
+up, delete it, and recall it through CLI or MCP.**
 
 MemoryWiki gives coding agents and chat agents a durable project memory that
 stays on your filesystem. It stores memory as Markdown/JSONL, keeps source
 provenance, records conflict/update history, and exposes read-first recall
 through CLI and MCP.
+
+Use it when an agent needs persistent project context, but you still want memory
+to stay inspectable, reversible, and under your control.
 
 ![MemoryWiki quickstart demo](docs/assets/memorywiki-quickstart.gif)
 

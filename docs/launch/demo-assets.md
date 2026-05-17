@@ -2,6 +2,9 @@
 
 Prepared launch assets:
 
+- `docs/assets/memorywiki-avatar.png`: 400x400 GitHub avatar candidate.
+- `docs/assets/memorywiki-social-preview.png`: 1280x640 repository social
+  preview candidate for GitHub link cards.
 - `docs/assets/memorywiki-quickstart.gif`: short terminal-style quickstart demo
   for the README hero section.
 - `docs/assets/recall-output.svg`: static recall output screenshot for posts,
@@ -58,4 +61,14 @@ required for the destructive action.
 ```text
 MemoryWiki: local-first Markdown memory for AI agents.
 grep it. diff it. back it up. delete it.
+```
+
+## Short pitch variants
+
+```text
+MemoryWiki is local-first Markdown memory for AI agents: grep it, diff it, back it up, delete it, and recall it through CLI or MCP.
+```
+
+```text
+Agents forget repo context. MemoryWiki keeps project memory in local Markdown/JSONL with provenance, hybrid recall, MCP, and explicit write gates.
 ```

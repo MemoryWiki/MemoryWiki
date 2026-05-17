@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">MemoryWiki social preview</title>
+  <desc id="desc">Local-first Markdown memory for AI agents with CLI, MCP, hybrid recall, and explicit write gates.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="640" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0b1712"/>
+      <stop offset="0.45" stop-color="#15362c"/>
+      <stop offset="1" stop-color="#07100d"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="22%" cy="38%" r="56%">
+      <stop offset="0" stop-color="#e4f8b6" stop-opacity="0.26"/>
+      <stop offset="0.55" stop-color="#e4f8b6" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#e4f8b6" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="28" stdDeviation="26" flood-color="#020806" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect width="1280" height="640" fill="url(#halo)"/>
+  <path d="M0 514c178-61 326-53 467-6 147 49 272 54 418-2 113-43 250-64 395-18" fill="none" stroke="#d7f7b5" stroke-width="2" opacity="0.18"/>
+  <path d="M0 548c187-44 323-31 445 9 174 57 306 42 456-11 116-41 242-51 379-8" fill="none" stroke="#fff8e8" stroke-width="1.5" opacity="0.13"/>
+  <g transform="translate(116 121)" filter="url(#cardShadow)">
+    <rect x="42" y="30" width="210" height="260" rx="28" fill="#f6eedb" opacity="0.28" transform="rotate(-7 147 160)"/>
+    <rect x="78" y="8" width="214" height="266" rx="30" fill="#f8f0de" opacity="0.52" transform="rotate(5 185 141)"/>
+    <rect x="46" y="0" width="238" height="286" rx="34" fill="#fff8e8"/>
+    <rect x="82" y="45" width="151" height="15" rx="7.5" fill="#17372d"/>
+    <rect x="82" y="88" width="109" height="13" rx="6.5" fill="#17372d" opacity="0.64"/>
+    <rect x="82" y="124" width="152" height="13" rx="6.5" fill="#17372d" opacity="0.4"/>
+    <rect x="82" y="160" width="93" height="13" rx="6.5" fill="#17372d" opacity="0.28"/>
+    <circle cx="218" cy="205" r="15" fill="#17372d"/>
+    <circle cx="145" cy="221" r="10" fill="#7ea86d"/>
+    <circle cx="191" cy="253" r="10" fill="#7ea86d"/>
+    <path d="M155 220l50-12M155 227l29 22" fill="none" stroke="#17372d" stroke-width="6" stroke-linecap="round" opacity="0.72"/>
+  </g>
+  <g font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+    <text x="485" y="214" fill="#fff8e8" font-size="92" font-weight="850" letter-spacing="-3">MemoryWiki</text>
+    <text x="489" y="282" fill="#d9f2bc" font-size="36" font-weight="650" letter-spacing="-0.6">Local-first Markdown memory for AI agents</text>
+    <text x="489" y="359" fill="#fff8e8" font-size="28" font-weight="500" opacity="0.92">grep it · diff it · back it up · delete it</text>
+    <g transform="translate(489 410)">
+      <rect width="555" height="70" rx="18" fill="#07100d" opacity="0.72" stroke="#d7f7b5" stroke-opacity="0.18"/>
+      <text x="28" y="45" fill="#c9f299" font-family="SFMono-Regular, Menlo, Consolas, monospace" font-size="24">memorywiki-recall --strategy hybrid</text>
+    </g>
+    <text x="489" y="548" fill="#fff8e8" font-size="24" font-weight="600" opacity="0.72">CLI · MCP · provenance · explicit write gates</text>
+  </g>
+</svg>

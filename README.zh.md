@@ -5,7 +5,8 @@
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 ![Status](https://img.shields.io/badge/status-v0.1.0%20candidate-orange)
 
-本地优先的 AI Agent 记忆 Wiki。
+本地优先的 AI Agent 记忆 Wiki：**可 grep、可 diff、可备份、可删除，并可通过
+CLI 或 MCP recall。**
 
 MemoryWiki 给 coding agent / chat agent 一个可长期维护的项目记忆层：
 记忆以 Markdown/JSONL 存在本地，可以 grep、diff、备份、审查和删除；同时保留
