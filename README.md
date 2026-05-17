@@ -25,10 +25,14 @@ files get stale. MemoryWiki is closer to a small local knowledge-management
 system for agents:
 
 - **Local-first**: canonical memory lives in your project or global memory root.
+- **Bilingual prompt-injection defense**: English and Chinese instruction-shaped
+  memory is neutralized before recall/read surfaces, while secrets are redacted
+  on managed writes.
+- **Cognitive layering**: episodic narratives, semantic facts with
+  `confidence`/`strength`/`source_refs`/`update_log`, and procedural workflows
+  are tracked separately instead of flattened into one vector index.
 - **Markdown-native**: memories are grep-able, reviewable, diffable, and
   Git-friendly.
-- **Layered**: hot files, sessions, episodes, semantic notes, procedures, and
-  read-only sources have different jobs.
 - **Provenance-aware**: source ingestion records SHA256-backed references.
 - **Conflict-friendly**: new evidence can append update history instead of
   silently overwriting older conclusions.

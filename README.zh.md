@@ -19,8 +19,12 @@ MemoryWiki 给 coding agent / chat agent 一个可长期维护的项目记忆层
 ## 核心特点
 
 - **本地优先**：canonical memory 在你的文件系统里。
+- **中英 prompt-injection 防御**：英文和中文的 instruction-shaped memory
+  会在 recall/read 输出前被中和，managed writes 会做 secret redaction。
+- **三层认知记忆**：episodic narrative、带
+  `confidence`/`strength`/`source_refs`/`update_log` 的 semantic facts、以及
+  procedural workflows 分开维护，而不是压平成单一 vector index。
 - **Markdown 原生**：可读、可 diff、可 Git 管理。
-- **分层记忆**：hot files、sessions、episodes、semantic、procedures、sources 各司其职。
 - **来源可追溯**：source ingest 带 SHA256 source reference。
 - **冲突不覆盖**：新证据可以追加 update log，而不是静默改写旧结论。
 - **MCP 可接入**：其他 agent 可以通过 read-first MCP server 调用记忆。
