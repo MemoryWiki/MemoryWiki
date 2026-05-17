@@ -57,7 +57,7 @@ def test_release_check_builds_expected_core_commands():
 def test_release_check_writes_manifest_when_requested(tmp_path, monkeypatch):
     import memorywiki_release_check
 
-    def fake_run(argv, cwd=None, env=None, text=None, capture_output=None):
+    def fake_run(argv, cwd=None, env=None, text=None, capture_output=None, **kwargs):
         return memorywiki_release_check.subprocess.CompletedProcess(argv, 0, stdout="", stderr="")
 
     def fake_write_manifest(**kwargs):
@@ -86,6 +86,53 @@ def test_release_check_writes_manifest_when_requested(tmp_path, monkeypatch):
     assert payload["status"] == "ok"
     assert payload["manifest_path"] == str(tmp_path / "manifest.json")
     assert any(result["name"] == "release-manifest" for result in payload["results"])
+
+
+def test_release_check_stages_external_backup_bundle_next_to_manifest(tmp_path, monkeypatch):
+    import memorywiki_release_check
+    from memorywiki_release_manifest import verify_manifest
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    (repo / "README.md").write_text("# MemoryWiki\n", encoding="utf-8")
+    backup_root = tmp_path / "backups"
+    backup_root.mkdir()
+    bundle = backup_root / "memorywiki-core-abc123.bundle"
+    bundle.write_bytes(b"synthetic backup bundle bytes\n")
+    release_dir = tmp_path / "release"
+    release_dir.mkdir()
+    manifest = release_dir / "manifest.json"
+
+    def fake_run(argv, cwd=None, env=None, text=None, capture_output=None, **kwargs):
+        stdout = "main\n" if argv[:3] == ["git", "branch", "--show-current"] else ""
+        if argv[:3] == ["git", "rev-parse", "HEAD"]:
+            stdout = "abc123\n"
+        return memorywiki_release_check.subprocess.CompletedProcess(argv, 0, stdout=stdout, stderr="")
+
+    monkeypatch.setattr(memorywiki_release_check.subprocess, "run", fake_run)
+
+    payload = memorywiki_release_check.run_release_check(
+        python="/venv/bin/python",
+        test_python="/usr/bin/python3",
+        repo_root=repo,
+        project_root=repo,
+        global_root=repo,
+        config=repo / ".mcp.json",
+        backup_root=backup_root,
+        backup_name="memorywiki-core",
+        manifest_out=manifest,
+        skip_tests=True,
+        skip_smoke=True,
+        skip_project_matrix=True,
+        skip_restore_check=True,
+        allow_dirty=True,
+    )
+
+    assert payload["status"] == "ok"
+    assert (release_dir / bundle.name).read_bytes() == bundle.read_bytes()
+    assert any(result["name"] == "release-artifacts-stage" for result in payload["results"])
+    monkeypatch.chdir(repo)
+    assert verify_manifest(manifest)["status"] == "ok"
 
 
 def test_release_check_summary_fails_when_any_required_command_fails():

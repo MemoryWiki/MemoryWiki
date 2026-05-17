@@ -6,12 +6,18 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 from typing import Any
 import zipfile
 
-from memorywiki_release_manifest import write_manifest as write_release_manifest
+from memorywiki_release_manifest import (
+    _latest_backup_bundle,
+    _safe_file,
+    _sha256_file,
+    write_manifest as write_release_manifest,
+)
 
 MAX_SKILL_ARCHIVE_BYTES = 50_000_000
 SKILL_SOURCE_SKIP_DIRS = {
@@ -161,6 +167,48 @@ def validate_skill_archive(skill_archive: str | Path, skill_source_dir: str | Pa
         "file_count": len(actual),
         "status": "ok",
     }
+
+
+def _stage_release_artifact(source: str | Path | None, manifest_path: Path) -> Path | None:
+    if not source:
+        return None
+    safe_source = _safe_file(source, "Release artifact")
+    parent = manifest_path.expanduser().parent
+    if not parent.exists() or parent.is_symlink() or not parent.is_dir():
+        raise ValueError("Manifest output parent must be a real directory: %s" % parent)
+    for ancestor in parent.parents:
+        if ancestor.is_symlink():
+            raise ValueError("Manifest output parent may not be below a symlink: %s" % ancestor)
+    destination = (parent / safe_source.name).resolve()
+    if destination == safe_source:
+        return destination
+    if destination.exists():
+        if destination.is_symlink() or not destination.is_file():
+            raise ValueError("Release artifact destination is unsafe: %s" % destination)
+        if destination.stat().st_size != safe_source.stat().st_size or _sha256_file(destination) != _sha256_file(safe_source):
+            raise ValueError("Release artifact destination already exists with different content: %s" % destination)
+        return destination
+    shutil.copy2(safe_source, destination)
+    return destination
+
+
+def _stage_manifest_artifacts(
+    *,
+    manifest_path: Path,
+    skill_archive: str | Path | None,
+    backup_root: str | Path | None,
+    backup_name: str,
+) -> list[Path]:
+    staged: list[Path] = []
+    skill = _stage_release_artifact(skill_archive, manifest_path)
+    if skill is not None:
+        staged.append(skill)
+    if backup_root:
+        bundle = _latest_backup_bundle(backup_root, backup_name)
+        backup = _stage_release_artifact(bundle, manifest_path)
+        if backup is not None:
+            staged.append(backup)
+    return staged
 
 
 def build_release_commands(
@@ -698,6 +746,24 @@ def run_release_check(
     if manifest_out:
         manifest_path = Path(manifest_out).expanduser()
         try:
+            staged_artifacts = _stage_manifest_artifacts(
+                manifest_path=manifest_path,
+                skill_archive=Path(skill_archive).expanduser() if skill_archive else None,
+                backup_root=Path(backup_root).expanduser() if backup_root else None,
+                backup_name=backup_name,
+            )
+            if staged_artifacts:
+                results.append(
+                    {
+                        "name": "release-artifacts-stage",
+                        "argv": ["internal:stage_release_artifacts", str(manifest_path.parent)],
+                        "required": True,
+                        "returncode": 0,
+                        "stdout": json.dumps([path.name for path in staged_artifacts]),
+                        "stderr": "",
+                    }
+                )
+                summary = summarize_results(results)
             written = write_release_manifest(
                 out=manifest_path,
                 repo_root=repo,
