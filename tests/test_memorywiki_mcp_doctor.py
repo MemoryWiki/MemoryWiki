@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 from pathlib import Path
 import stat
 
@@ -52,9 +53,12 @@ def test_mcp_doctor_resolves_python_command_from_path(tmp_path, monkeypatch):
     project_root.mkdir(parents=True)
     global_root.mkdir(parents=True)
     bin_dir.mkdir()
-    fake_python = bin_dir / "python3"
-    fake_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    fake_python.chmod(fake_python.stat().st_mode | stat.S_IXUSR)
+    fake_python = bin_dir / ("python3.cmd" if platform.system() == "Windows" else "python3")
+    if platform.system() == "Windows":
+        fake_python.write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
+    else:
+        fake_python.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+        fake_python.chmod(fake_python.stat().st_mode | stat.S_IXUSR)
     monkeypatch.setenv("PATH", str(bin_dir) + os.pathsep + os.getenv("PATH", ""))
     config_path = tmp_path / ".mcp.json"
     config_path.write_text(

@@ -765,6 +765,10 @@ def result_to_dict(result: RecallResult, explain_score: bool = False) -> dict:
     }
 
 
+def _json_dumps_cli(payload: dict) -> str:
+    return json.dumps(payload, ensure_ascii=True, indent=2)
+
+
 def render_human(result: RecallResult, explain_score: bool = False) -> str:
     if not result.hits:
         return "No matching memory found for: %s\n" % _safe_output_text(result.query)
@@ -917,13 +921,7 @@ def main(argv: list[str] | None = None) -> int:
             print(str(exc), file=sys.stderr)
             return 2
     if args.format == "json":
-        print(
-            json.dumps(
-                result_to_dict(result, explain_score=args.explain_score),
-                ensure_ascii=False,
-                indent=2,
-            )
-        )
+        print(_json_dumps_cli(result_to_dict(result, explain_score=args.explain_score)))
     else:
         print(render_human(result, explain_score=args.explain_score))
     return 0

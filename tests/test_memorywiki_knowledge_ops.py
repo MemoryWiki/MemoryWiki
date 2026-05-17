@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform
 import subprocess
 import sys
 from pathlib import Path
@@ -45,6 +46,10 @@ def _seed_session(root: Path) -> None:
 
 
 def _write_fake_python(path: Path) -> Path:
+    if platform.system() == "Windows":
+        path = path.with_suffix(".cmd")
+        path.write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
+        return path
     path.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     path.chmod(path.stat().st_mode | 0o111)
     return path

@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import stat
 import subprocess
 import sys
 import tempfile
@@ -115,6 +116,17 @@ def _run(
         text=True,
         capture_output=True,
     )
+
+
+def _remove_tree(path: Path) -> None:
+    def _make_writable_and_retry(func, item, _exc_info):
+        try:
+            os.chmod(item, stat.S_IWRITE | stat.S_IREAD)
+            func(item)
+        except OSError:
+            pass
+
+    shutil.rmtree(path, onerror=_make_writable_and_retry)
 
 
 def _check_required_files(restored_root: Path) -> dict[str, Any]:
@@ -319,7 +331,7 @@ def run_restore_check(
         }
     finally:
         if not keep_restore:
-            shutil.rmtree(temp_root, ignore_errors=True)
+            _remove_tree(temp_root)
 
 
 def render_human(payload: dict[str, Any]) -> str:

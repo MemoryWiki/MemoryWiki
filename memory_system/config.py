@@ -15,8 +15,17 @@ DEFAULT_MEMORY_TIMEZONE = "Asia/Shanghai"
 DEFAULT_CANONICAL_USER_MEMORY_PATH = "~/.agent_memory/global/USER.md"
 
 
+def _expand_user_path(value: str | Path) -> Path:
+    raw = str(value)
+    if raw == "~" or raw.startswith("~/") or raw.startswith("~\\"):
+        home = os.getenv("HOME") or os.path.expanduser("~")
+        suffix = raw[2:] if len(raw) > 1 else ""
+        return Path(home) / suffix if suffix else Path(home)
+    return Path(os.path.expanduser(raw))
+
+
 def _default_canonical_user_memory_path() -> Path:
-    return Path(os.path.expanduser(DEFAULT_CANONICAL_USER_MEMORY_PATH))
+    return _expand_user_path(DEFAULT_CANONICAL_USER_MEMORY_PATH)
 
 
 def _env_int(name: str, default: int) -> int:
@@ -91,8 +100,8 @@ class MemoryConfig:
             if project_storage_root is not None
             else cwd / ".agent_memory" / "project"
         )
-        global_root = Path(
-            os.path.expanduser(os.getenv("MEMORY_GLOBAL_ROOT", "~/.agent_memory/global"))
+        global_root = _expand_user_path(
+            os.getenv("MEMORY_GLOBAL_ROOT", "~/.agent_memory/global")
         )
         openai_timeout_seconds = _env_int("OPENAI_TIMEOUT_SECONDS", 30)
         openai_max_retries = _env_int("OPENAI_MAX_RETRIES", 2)
@@ -148,12 +157,10 @@ class MemoryConfig:
             chat_write_enabled=_env_bool("MEMORY_CHAT_WRITE_ENABLED", False),
             sanitize_on_write=_env_bool("MEMORY_SANITIZE_ON_WRITE", True),
             secure_permissions=_env_bool("MEMORY_SECURE_PERMISSIONS", True),
-            canonical_user_memory_path=Path(
-                os.path.expanduser(
-                    os.getenv(
-                        "MEMORY_CANONICAL_USER_PATH",
-                        DEFAULT_CANONICAL_USER_MEMORY_PATH,
-                    )
+            canonical_user_memory_path=_expand_user_path(
+                os.getenv(
+                    "MEMORY_CANONICAL_USER_PATH",
+                    DEFAULT_CANONICAL_USER_MEMORY_PATH,
                 )
             ),
         )

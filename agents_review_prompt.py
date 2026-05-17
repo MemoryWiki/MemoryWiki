@@ -8,13 +8,20 @@ import sys
 MAX_HOURS = 168
 
 
+def _display_path(value: str | Path) -> str:
+    raw = str(value)
+    if raw.startswith("/") and not raw.startswith("//"):
+        return raw
+    return str(Path(raw).expanduser())
+
+
 def render_agents_review_prompt(
     workspace_root: str | Path,
     hours: int = 24,
     memory_system_home: str | Path | None = None,
 ) -> str:
-    root = str(Path(workspace_root).expanduser())
-    memory_home = str(memory_system_home or Path(__file__).resolve().parent)
+    root = _display_path(workspace_root)
+    memory_home = _display_path(memory_system_home or Path(__file__).resolve().parent)
     return f"""Review project progress across the current workspace for the past {hours} hours and maintain existing AGENTS.md files.
 
 Workspace root:
