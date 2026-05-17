@@ -156,6 +156,59 @@ def test_memory_backup_bundles_detached_head_without_local_main(tmp_path):
     assert (restored / "MEMORY.md").read_text(encoding="utf-8") == "# Memory\n"
 
 
+def test_memory_backup_accepts_shallow_checkout(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    subprocess.run(["git", "init"], cwd=source, check=True, capture_output=True, text=True)
+    subprocess.run(["git", "config", "user.name", "Tester"], cwd=source, check=True)
+    subprocess.run(["git", "config", "user.email", "tester@example.com"], cwd=source, check=True)
+    (source / "MEMORY.md").write_text("# Memory\n", encoding="utf-8")
+    subprocess.run(["git", "add", "MEMORY.md"], cwd=source, check=True)
+    subprocess.run(["git", "commit", "-m", "initial"], cwd=source, check=True, capture_output=True, text=True)
+    shallow = tmp_path / "shallow"
+    subprocess.run(
+        ["git", "clone", "--depth", "1", "file://%s" % source, str(shallow)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    subprocess.run(
+        ["git", "checkout", "--detach", "HEAD"],
+        cwd=shallow,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],
+        cwd=shallow,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip() == "true"
+
+    backup_root = tmp_path / "backups"
+    subprocess.run(
+        [
+            sys.executable,
+            "memory_backup.py",
+            "--root",
+            str(shallow),
+            "--backup-root",
+            str(backup_root),
+            "--name",
+            "shallow-memory",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+    assert (backup_root / "shallow-memory.git").is_dir()
+    assert next(backup_root.glob("shallow-memory-*.bundle")).is_file()
+
+
 def test_memory_backup_rejects_symlinked_root(tmp_path):
     real_root = tmp_path / "real"
     real_root.mkdir()

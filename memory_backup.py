@@ -119,6 +119,7 @@ def _ensure_remote(root: Path, backup_root: Path, name: str) -> Path:
     elif remote.is_symlink() or not remote.is_dir():
         raise ValueError("Backup remote must be a real directory: %s" % remote)
     _ensure_remote_hooks_disabled(remote)
+    _run(["git", "--git-dir", str(remote), "config", "--local", "receive.shallowUpdate", "true"])
     if os.name != "nt":
         for current, dirs, files in os.walk(remote):
             os.chmod(current, 0o700)
