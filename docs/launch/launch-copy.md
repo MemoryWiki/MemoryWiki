@@ -8,22 +8,78 @@ is public, CI is green, and the v0.1.0 release candidate is attached.
 Title:
 
 ```text
-Show HN: MemoryWiki - local-first Markdown memory for AI agents
+Show HN: MemoryWiki - local memory wiki for AI agents with injection defense
 ```
 
-Post:
+URL:
 
 ```text
-Hi HN, I built MemoryWiki: a local-first, Markdown-native memory system for AI agents.
+https://github.com/MemoryWiki/MemoryWiki
+```
 
-The problem: agents forget project context, and hosted memory can be opaque. MemoryWiki keeps durable memory in local Markdown/JSONL files that you can grep, diff, back up, and delete. It has read-first CLI/MCP recall, source provenance, update/conflict logs, and explicit write gates for save/ingest/forget/global writes.
+Text:
 
-The project is early, but the core storage model, recall path, MCP server, synthetic example root, mini benchmark, public-clean checks, and release checks are in place.
+```text
+Hi HN, I built MemoryWiki because coding agents kept losing useful project
+context between sessions, and I wanted memory I could inspect, diff, back up,
+and delete.
 
-I would especially value critique on:
-- whether the memory layout is understandable,
-- whether the quickstart is low-friction,
-- whether the security/write-gate model feels right for local agent memory.
+MemoryWiki keeps canonical memory in local Markdown/JSONL files: sessions,
+daily episodes, semantic memories with confidence/strength/source_refs/update_log,
+procedural workflows, source documents, and rebuildable retrieval indexes.
+Recall works through CLI and a read-first MCP server. The default path is local
+and does not require an API key.
+
+The design choices I would especially value feedback on:
+
+1. Cognitive layering vs. one flat vector store. The bet is that episodic
+   "what happened", semantic "what is true", and procedural "how to do it"
+   should have different metadata and lifecycles.
+2. Bilingual instruction-shaped memory neutralization. English and Chinese
+   strings that look like memory poisoning, such as "ignore previous
+   instructions" or "忽略之前指示", are neutralized before recall/read output.
+   I do not think regex is a complete prompt-injection solution; I am treating
+   it as one layer in a defense-in-depth model.
+3. Local file safety: path containment, symlink rejection, atomic writes,
+   audit logs, dry-run-first forget/delete, and env-gated MCP writes.
+
+This is early v0.1.0 software, Apache-2.0. The repo includes a synthetic memory
+root, a two-minute quickstart, a mini recall benchmark, public-clean checks,
+and CI across OS/Python versions. I am not claiming large benchmark wins yet;
+the next milestone is a reproducible larger retrieval eval and more real client
+setup reports.
+```
+
+Do not use the old internal project history in the post. Keep the launch story
+about the public repo, the local-first design, and specific feedback requests.
+
+## Show HN Reply Prep
+
+Likely questions and concise answers:
+
+- **How is this different from a vector database?** Vector indexes are useful
+  retrieval sidecars here, not canonical memory. The canonical layer is human
+  readable Markdown/JSONL with provenance, update history, and explicit memory
+  kinds.
+- **Does regex stop prompt injection?** No. The sanitizer is one layer. Memory
+  is still treated as untrusted context data, outputs are neutralized before
+  recall/read surfaces, MCP writes are gated, and deletes are audited.
+- **Why include Chinese patterns?** The project is designed for bilingual agent
+  use. Chinese instruction-shaped memory should not get a free pass just
+  because many safety examples are English-only.
+- **Does it automatically save chats?** No. Durable writes require explicit
+  user intent: save a session, crystallize an answer, ingest a source, forget a
+  memory, or write global memory.
+- **Why not just use a notes app?** Notes apps are good canonical stores for
+  humans. MemoryWiki is an agent-memory workflow on top of local files: recall,
+  MCP, provenance, confidence/strength, review, and dry-run delete.
+
+Post timing:
+
+- Prefer Tuesday to Thursday, 7-9 AM US Pacific.
+- Stay available for the first hour and reply with concrete issue links when a
+  comment identifies a bug, confusing doc, or missing example.
+- Do not ask for upvotes or coordinate votes.
 ```
 
 ## X / Twitter Thread
