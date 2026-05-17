@@ -19,10 +19,13 @@ Highlights:
 - Crystallization workflow for user-approved durable memory.
 - Dry-run-first forget/delete workflow.
 - Public example memory root, mini benchmark, golden eval, and release checks.
+- Launch-ready README, roadmap, issue templates, release notes draft, and demo
+  assets.
 
 Before release:
 
-- Publish a clean GitHub repository.
-- Replace placeholder repository owner strings.
-- Enable CI, branch protection, secret scanning, and Discussions.
+- Switch the repository from private to public after final approval.
+- Recheck branch protection, secret scanning, push protection, and private
+  vulnerability reporting after public/account-plan support is available.
+- Generate the release manifest and build artifacts from a clean commit.
 - Tag the release after CI is green.

@@ -1,5 +1,10 @@
 # MemoryWiki
 
+[![CI](https://github.com/MemoryWiki/MemoryWiki/actions/workflows/ci.yml/badge.svg)](https://github.com/MemoryWiki/MemoryWiki/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.9--3.13-blue)
+![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![Status](https://img.shields.io/badge/status-v0.1.0%20candidate-orange)
+
 本地优先的 AI Agent 记忆 Wiki。
 
 MemoryWiki 给 coding agent / chat agent 一个可长期维护的项目记忆层：
@@ -7,6 +12,8 @@ MemoryWiki 给 coding agent / chat agent 一个可长期维护的项目记忆层
 来源、冲突记录、更新日志，并通过 CLI 和 MCP 提供默认只读的 recall。
 
 它适合想要 agent 记忆、但不想把项目历史交给云端记忆服务的人。
+
+![MemoryWiki quickstart demo](docs/assets/memorywiki-quickstart.gif)
 
 ## 核心特点
 
@@ -60,19 +67,26 @@ audit.jsonl
 
 可以看 `examples/memory-root/` 的公开样例。
 
-## 快速开始
+## 两分钟快速开始
 
-对样例记忆运行 recall：
+运行公开样例记忆：
 
 ```bash
-memorywiki-recall \
-  --project-root examples/memory-root \
-  --scope project \
-  --query "What is MemoryWiki?" \
-  --strategy hybrid \
-  --embedding local \
-  --graph local \
-  --format human
+git clone https://github.com/MemoryWiki/MemoryWiki.git
+cd MemoryWiki
+python3 -m pip install -e ".[mcp]"
+memorywiki-index-maintain --project-root examples/memory-root --scope project --format human
+memorywiki-recall --project-root examples/memory-root --scope project --query "What is MemoryWiki?" --strategy hybrid --embedding local --graph local --format human
+```
+
+预期输出形态：
+
+```text
+# Memory Recall
+
+1. [project/semantic] MemoryWiki Overview (memorywiki-overview, score ...)
+MemoryWiki is a local-first memory wiki for AI agents...
+Sources: memory-file:memorywiki-overview
 ```
 
 检查 retrieval index：
@@ -204,6 +218,16 @@ python3 -m pytest tests -q
 - memory roots、manifest、source ingest、MCP config、生成文件都有路径和 symlink 防护。
 - retrieval index 是可重建 sidecar，不是 canonical memory。
 - recall、summary、index 会处理 secret-like 字符串。
+
+## 简单对比
+
+| 方案 | 本地文件 | Agent recall | 来源追溯 | 冲突历史 | MCP | 删除流程 |
+| --- | --- | --- | --- | --- | --- | --- |
+| MemoryWiki | 是 | 是 | 是 | 是 | 是 | dry-run-first |
+| 云端 memory service | 通常否 | 是 | 不一定 | 不一定 | 不一定 | 不一定 |
+| Vector DB notebook | 不一定 | 自己写 | 自己写 | 通常否 | 自己写 | 自己写 |
+| Obsidian/PKM only | 是 | 否 | 手动 | 手动 | 否 | 手动 |
+| `AGENTS.md` only | 是 | 仅启动时 | 手动 | 否 | 否 | 手动 |
 
 ## License
 

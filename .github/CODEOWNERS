@@ -1,3 +1,2 @@
-# Update this if repository ownership moves to an organization or maintainer
-# team before enabling CODEOWNERS as a required review gate.
+# Primary public maintainer for the v0.1.x launch.
 * @MemoryWiki

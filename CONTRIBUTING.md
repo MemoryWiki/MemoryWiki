@@ -39,6 +39,30 @@ Before opening a PR:
 - Update README or docs for user-facing changes.
 - Keep benchmark claims narrow and reproducible.
 
+## First PR In 15 Minutes
+
+Good starter contributions:
+
+- Run the README quickstart and report unclear output.
+- Improve one docs sentence that made setup confusing.
+- Add a synthetic example memory note under `examples/`.
+- Add a regression test for a small CLI or MCP behavior.
+- Add a missing expected-output block to a tutorial.
+
+Use the `good first issue`, `docs confusion`, `install`, and `mcp` labels to find
+small tasks. Keep first PRs narrow and include the exact command you used to
+verify the change.
+
+## Maintainer Expectations
+
+- Security and privacy reports are handled before feature requests.
+- Install and quickstart regressions are handled before new capabilities.
+- PRs should normally be squash-merged after CI is green.
+- Design-changing proposals should start in Discussions or an issue before a
+  large PR.
+- Public release tags are not moved after publication; mistakes are fixed in a
+  patch release.
+
 ## Issue Triage
 
 Use issues for actionable bugs and feature requests. Use Discussions for design

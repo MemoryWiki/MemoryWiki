@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="520" viewBox="0 0 980 520" role="img" aria-label="MemoryWiki recall output screenshot">
+  <rect width="980" height="520" rx="24" fill="#0b1020"/>
+  <rect x="28" y="28" width="924" height="464" rx="18" fill="#111827" stroke="#334155" stroke-width="2"/>
+  <circle cx="56" cy="58" r="8" fill="#ff5f57"/>
+  <circle cx="82" cy="58" r="8" fill="#ffbd2e"/>
+  <circle cx="108" cy="58" r="8" fill="#28c840"/>
+  <text x="52" y="104" font-family="Menlo, Consolas, monospace" font-size="22" font-weight="700" fill="#f8fafc">MemoryWiki recall</text>
+  <text x="52" y="148" font-family="Menlo, Consolas, monospace" font-size="18" fill="#9ae6b4">$ memorywiki-recall --query "What is MemoryWiki?"</text>
+  <text x="52" y="198" font-family="Menlo, Consolas, monospace" font-size="18" fill="#e6edf3"># Memory Recall</text>
+  <text x="52" y="230" font-family="Menlo, Consolas, monospace" font-size="17" fill="#94a3b8">Strategy: hybrid</text>
+  <text x="52" y="276" font-family="Menlo, Consolas, monospace" font-size="17" fill="#e6edf3">1. [project/semantic] MemoryWiki Overview</text>
+  <text x="52" y="310" font-family="Menlo, Consolas, monospace" font-size="17" fill="#cbd5e1">MemoryWiki is a local-first memory wiki for AI agents.</text>
+  <text x="52" y="344" font-family="Menlo, Consolas, monospace" font-size="17" fill="#cbd5e1">It stores durable project context in Markdown...</text>
+  <text x="52" y="392" font-family="Menlo, Consolas, monospace" font-size="17" fill="#9ae6b4">Sources: memory-file:memorywiki-overview</text>
+  <text x="52" y="442" font-family="Menlo, Consolas, monospace" font-size="16" fill="#64748b">Read-first by default. Writes require explicit gates.</text>
+</svg>

@@ -47,7 +47,7 @@ memorywiki-release-check \
 ## Build Artifacts
 
 ```bash
-python3 -m pip install build twine
+python3 -m pip install build==1.4.4 twine==6.2.0
 python3 -m build --sdist --wheel --outdir "$MEMORYWIKI_RELEASE_TMP/dist"
 python3 -m twine check "$MEMORYWIKI_RELEASE_TMP"/dist/*
 ```
@@ -91,3 +91,6 @@ First public release candidate for local-first agent memory.
 - No hosted sync service.
 - Benchmarks are small public smoke tests, not broad claims.
 ```
+
+The prepared long-form draft lives at
+`docs/launch/v0.1.0-release-notes.md`.

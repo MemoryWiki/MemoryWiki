@@ -1,0 +1,46 @@
+name: First-user report
+description: Share first-run feedback after trying MemoryWiki.
+title: "[First-user report]: "
+labels:
+  - first-user-report
+  - docs confusion
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying MemoryWiki. Synthetic examples are best. Please do not paste private memory, secrets, or private local paths.
+  - type: textarea
+    id: path
+    attributes:
+      label: What path did you try?
+      description: README quickstart, MCP config, cross-project demo, source ingest, forget flow, or something else.
+    validations:
+      required: true
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Outcome
+      options:
+        - Worked first try
+        - Worked after docs lookup
+        - Install failed
+        - Recall output was confusing
+        - MCP setup failed
+        - I stopped before finishing
+    validations:
+      required: true
+  - type: textarea
+    id: confusing
+    attributes:
+      label: What was confusing?
+      description: Which sentence, command, or output should be clearer?
+  - type: textarea
+    id: useful
+    attributes:
+      label: What felt useful?
+      description: What part would make you consider using or starring the project?
+  - type: textarea
+    id: next
+    attributes:
+      label: What should we improve next?
+      description: One concrete change would help most.

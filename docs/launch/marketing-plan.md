@@ -32,13 +32,14 @@ Problem-first story:
 
 ## Assets To Prepare
 
-- 20-second terminal GIF.
-- Architecture diagram.
-- Recall output screenshot.
-- Five-command quickstart.
-- One cross-project recall demo.
+- 20-second terminal GIF: `docs/assets/memorywiki-quickstart.gif`.
+- Architecture diagram: README Mermaid diagram.
+- Recall output screenshot: `docs/assets/recall-output.svg`.
+- Five-command quickstart: README "Try It In 2 Minutes".
+- One cross-project recall demo: `docs/demo-cross-project-recall.md`.
 - FAQ: local-only mode, no API key required, MCP gates, privacy model,
   limitations, comparison to hosted memory tools.
+- Launch copy pack: `docs/launch/launch-copy.md`.
 
 ## Feedback Operations
 

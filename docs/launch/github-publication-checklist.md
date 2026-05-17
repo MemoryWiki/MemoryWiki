@@ -23,17 +23,29 @@ from the local machine.
 
 - Add description: `Local-first Memory Wiki for AI agents`.
 - Add topics: `agent-memory`, `local-first`, `mcp`, `knowledge-management`,
-  `pkm`, `llm`, `retrieval`, `markdown`.
+  `pkm`, `llm`, `retrieval`, `markdown`, `ai-agents`, `mcp-server`,
+  `markdown-notes`, `local-ai`.
 - Enable Issues, Pull Requests, Discussions, secret scanning, push protection,
   Dependabot alerts, and Dependabot updates.
 - Prefer squash merges and automatic branch deletion.
 - Disable unused features until there is a reason to turn them on.
+
+Current private-repo status:
+
+- Description, topics, Issues, Discussions, squash-only merge, and automatic
+  branch deletion are configured.
+- Wiki and Projects are disabled.
+- Dependabot vulnerability alerts are enabled.
+- Branch protection, secret scanning, push protection, and private
+  vulnerability reporting must be rechecked after the repository is public or
+  account-plan support is available.
 
 ## 4. Governance Files
 
 - `LICENSE`
 - `README.md`
 - `README.zh.md`
+- `ROADMAP.md`
 - `SECURITY.md`
 - `CONTRIBUTING.md`
 - `CODE_OF_CONDUCT.md`
@@ -61,6 +73,14 @@ from the local machine.
 - Architecture diagram showing local files, CLI, MCP, and write gates.
 - Screenshot of recall output with provenance or warnings.
 - One five-command demo that requires no hosted service and no API key.
+
+Prepared assets:
+
+- `docs/assets/memorywiki-quickstart.gif`
+- `docs/assets/recall-output.svg`
+- `docs/launch/demo-assets.md`
+- `docs/launch/launch-copy.md`
+- `docs/launch/v0.1.0-release-notes.md`
 
 ## 8. Launch Sequence
 

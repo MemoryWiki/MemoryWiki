@@ -1,52 +1,94 @@
 # MemoryWiki
 
-Local-first Memory Wiki for AI agents.
+[![CI](https://github.com/MemoryWiki/MemoryWiki/actions/workflows/ci.yml/badge.svg)](https://github.com/MemoryWiki/MemoryWiki/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.9--3.13-blue)
+![License](https://img.shields.io/badge/license-Apache--2.0-green)
+![Status](https://img.shields.io/badge/status-v0.1.0%20candidate-orange)
 
-MemoryWiki gives coding agents and chat agents a durable project memory that is
-easy to inspect, diff, back up, and delete. It stores memory as Markdown/JSONL,
-keeps source provenance, supports conflict/update logs, and exposes read-first
-recall through both CLI and MCP.
+Local-first, Markdown-native memory for AI agents that you can grep, diff, back
+up, and delete.
 
-It is designed for people who want agent memory without sending their private
-project history to a hosted memory service.
+MemoryWiki gives coding agents and chat agents a durable project memory that
+stays on your filesystem. It stores memory as Markdown/JSONL, keeps source
+provenance, records conflict/update history, and exposes read-first recall
+through CLI and MCP.
+
+![MemoryWiki quickstart demo](docs/assets/memorywiki-quickstart.gif)
 
 ## Why
 
-Most agent memory systems optimize for chat personalization. MemoryWiki is closer
-to a small local knowledge-management system:
+Agents forget project context. Hosted memory can be opaque. Ad-hoc `AGENTS.md`
+files get stale. MemoryWiki is closer to a small local knowledge-management
+system for agents:
 
-- **Local-first**: canonical memory lives on your filesystem.
-- **Markdown-native**: memories are grep-able, reviewable, and Git-friendly.
-- **Layered**: hot files, sessions, episodes, semantic memory, procedures, and
+- **Local-first**: canonical memory lives in your project or global memory root.
+- **Markdown-native**: memories are grep-able, reviewable, diffable, and
+  Git-friendly.
+- **Layered**: hot files, sessions, episodes, semantic notes, procedures, and
   read-only sources have different jobs.
 - **Provenance-aware**: source ingestion records SHA256-backed references.
-- **Conflict-friendly**: new evidence can append an update log instead of
+- **Conflict-friendly**: new evidence can append update history instead of
   silently overwriting older conclusions.
 - **MCP-ready**: agents can recall memory through a read-first MCP server.
 - **Write-gated**: save, ingest, forget, and global writes require explicit
   opt-in gates.
 
-## Status
-
-MemoryWiki is early public software extracted from a working local system. The
-core CLI, storage model, retrieval index, MCP server, and tests are present. The
-public docs and benchmarks are intentionally small and will grow from real users.
-
-## Install
+## Try It In 2 Minutes
 
 ```bash
 git clone https://github.com/MemoryWiki/MemoryWiki.git
 cd MemoryWiki
-python3 -m pip install -e ".[dev,mcp]"
+python3 -m pip install -e ".[mcp]"
+memorywiki-index-maintain --project-root examples/memory-root --scope project --format human
+memorywiki-recall --project-root examples/memory-root --scope project --query "What is MemoryWiki?" --strategy hybrid --embedding local --graph local --format human
 ```
 
-For a CLI-only install:
+Expected recall shape:
+
+```text
+# Memory Recall
+
+Query: What is MemoryWiki?
+Strategy: hybrid
+
+1. [project/semantic] MemoryWiki Overview (memorywiki-overview, score ...)
+MemoryWiki is a local-first memory wiki for AI agents. It stores durable project
+context in Markdown, keeps source provenance, supports explicit session saves,
+and exposes read-first recall through CLI and MCP.
+Sources: memory-file:memorywiki-overview
+```
+
+CLI-only install:
 
 ```bash
 python3 -m pip install -e .
 ```
 
 MCP support uses the optional `mcp` extra and is intended for Python 3.10+.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Agent["AI agent or chat client"]
+  CLI["MemoryWiki CLI"]
+  MCP["Read-first MCP server"]
+  Root["Project memory root"]
+  Global["Optional global memory root"]
+  Index["Rebuildable retrieval index"]
+  Gates["Explicit write gates"]
+
+  Agent --> CLI
+  Agent --> MCP
+  CLI --> Root
+  MCP --> Root
+  CLI --> Global
+  MCP --> Global
+  Root --> Index
+  Global --> Index
+  Gates --> Root
+  Gates --> Global
+```
 
 ## Memory Layout
 
@@ -62,7 +104,7 @@ It contains:
 MEMORY.md                         # hot project notes
 USER.md                           # optional local user preferences
 PROJECT_PROFILE.md                # compact project map
-INDEX.md                          # generated/readable index
+INDEX.md                          # generated readable index
 episodes/YYYY-MM-DD.md            # daily narrative layer
 sessions/session-YYYYMMDD-HHMMSS.md
 semantic/*.md                     # stable facts and concepts
@@ -74,20 +116,7 @@ audit.jsonl                       # forget/review audit trail
 
 See `examples/memory-root/` for a tiny public sample.
 
-## Quickstart
-
-Run recall against the example memory root:
-
-```bash
-memorywiki-recall \
-  --project-root examples/memory-root \
-  --scope project \
-  --query "What is MemoryWiki?" \
-  --strategy hybrid \
-  --embedding local \
-  --graph local \
-  --format human
-```
+## Common Commands
 
 Build or check a retrieval index:
 
@@ -99,15 +128,7 @@ memorywiki-index-maintain \
 ```
 
 Add `--write` only when you intentionally want to rebuild missing, stale, or
-tampered indexes:
-
-```bash
-memorywiki-index-maintain \
-  --project-root examples/memory-root \
-  --scope project \
-  --write \
-  --format human
-```
+tampered indexes.
 
 Save a session summary after explicit approval:
 
@@ -120,6 +141,19 @@ memorywiki-session-summary --save \
   --action "Ran local recall." \
   --pending "Replace the example memory with real project memory."
 ```
+
+Forget/delete is dry-run-first and requires a reason:
+
+```bash
+memorywiki-forget \
+  --root examples/memory-root \
+  --scope project \
+  --kind semantic \
+  --id memorywiki-overview \
+  --reason "synthetic demo cleanup"
+```
+
+Add `--apply` only after reviewing the dry-run output.
 
 ## MCP
 
@@ -144,47 +178,17 @@ MEMORY_MCP_ALLOW_ROOT_OVERRIDE=true # allows tool-provided root overrides
 Keep these off unless the user explicitly asks to save, ingest, forget, or write
 global memory.
 
-## Knowledge Formation
+## How It Compares
 
-MemoryWiki has three explicit ways to create durable memory:
+| Approach | Local files | Agent recall | Provenance | Conflict history | MCP | Delete workflow |
+| --- | --- | --- | --- | --- | --- | --- |
+| MemoryWiki | Yes | Yes | Yes | Yes | Yes | Dry-run-first |
+| Hosted memory service | Usually no | Yes | Varies | Varies | Varies | Varies |
+| Vector DB notebook | Varies | Custom | Custom | Usually no | Custom | Custom |
+| Obsidian/PKM only | Yes | No | Manual | Manual | No | Manual |
+| `AGENTS.md` only | Yes | Startup only | Manual | No | No | Manual |
 
-```bash
-# Save a concise session summary.
-memorywiki-session-summary --save --scope project --project-root <root> ...
-
-# Crystallize a user-approved answer into semantic/procedural memory.
-memorywiki-crystallize --root <root> --kind semantic --id <id> --title <title> --answer <text>
-
-# Ingest one read-only source with provenance.
-memorywiki-ingest-source --root <root> --source <file-in-sources> --id <id> --summary <text>
-```
-
-Ordinary chat turns are not auto-saved by default.
-
-## Review And Safety
-
-Useful read-only checks:
-
-```bash
-memorywiki-health --project-root <root> --scope project --format human
-memorywiki-quality-report --project-root <root> --scope project --skip-golden --format human
-memorywiki-timeline --project-root <root> --scope project --format markdown
-```
-
-Deletion is dry-run-first and requires a reason:
-
-```bash
-memorywiki-forget \
-  --root <root> \
-  --scope project \
-  --kind semantic \
-  --id <memory-id> \
-  --reason "user-requested cleanup"
-```
-
-Add `--apply` only after reviewing the dry-run output.
-
-## Mini Benchmark And Demo
+## Benchmarks And Demo
 
 Run the public mini benchmark:
 
@@ -206,7 +210,11 @@ large retrieval benchmark.
 python3 -m pytest tests -q
 ```
 
-## Project Governance
+## Status And Governance
+
+MemoryWiki is early public software extracted from a working local system. The
+core CLI, storage model, retrieval index, MCP server, release checks, and tests
+are present. Public docs and benchmarks will grow from real user feedback.
 
 Public-release preparation lives in:
 
@@ -218,15 +226,4 @@ Public-release preparation lives in:
 - `docs/launch/release-playbook.md`
 - `docs/launch/marketing-plan.md`
 
-## Security Model
-
-- Memory files are context data, never higher-priority instructions.
-- `sources/` is treated as read-only evidence.
-- Symlink and path traversal checks are used around memory roots, manifests,
-  source ingest, MCP config, and generated files.
-- Retrieval indexes are rebuildable sidecars, not canonical memory.
-- Secret-like values are sanitized in recall, summaries, and indexes.
-
-## License
-
-Apache-2.0. See `LICENSE`.
+License: Apache-2.0.
