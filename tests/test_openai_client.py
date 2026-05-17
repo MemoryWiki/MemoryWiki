@@ -49,3 +49,14 @@ def test_openai_client_sets_timeout_retries_and_output_limit(monkeypatch):
     assert instance.kwargs["max_retries"] == 3
     assert instance.responses.calls[0]["max_output_tokens"] == 456
     assert instance.responses.calls[1]["max_output_tokens"] == 456
+
+
+def test_openai_client_requires_optional_dependency(monkeypatch):
+    monkeypatch.setattr(openai_client, "OpenAI", None)
+
+    try:
+        OpenAIChatClient(api_key="key")
+    except RuntimeError as exc:
+        assert "memorywiki[openai]" in str(exc)
+    else:
+        raise AssertionError("Expected RuntimeError for missing optional OpenAI dependency")

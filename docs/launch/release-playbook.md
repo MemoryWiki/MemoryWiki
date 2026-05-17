@@ -52,6 +52,9 @@ python3 -m build --sdist --wheel --outdir "$MEMORYWIKI_RELEASE_TMP/dist"
 python3 -m twine check "$MEMORYWIKI_RELEASE_TMP"/dist/*
 ```
 
+The base install is local-first and does not install hosted AI SDKs. Install
+`.[openai]` only when testing the optional OpenAI backend.
+
 ## Tagging
 
 Tag only after CI is green:

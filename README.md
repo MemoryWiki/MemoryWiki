@@ -67,7 +67,13 @@ CLI-only install:
 python3 -m pip install -e .
 ```
 
-MCP support uses the optional `mcp` extra and is intended for Python 3.10+.
+The base install is local-first and does not require an API key. MCP support
+uses the optional `mcp` extra and is intended for Python 3.10+. The optional
+OpenAI backend is installed separately:
+
+```bash
+python3 -m pip install -e ".[openai]"
+```
 
 ## Architecture
 
@@ -226,6 +232,7 @@ Public-release preparation lives in:
 - `CODE_OF_CONDUCT.md`
 - `CHANGELOG.md`
 - `docs/launch/github-publication-checklist.md`
+- `docs/launch/public-go-live-runbook.md`
 - `docs/launch/release-playbook.md`
 - `docs/launch/marketing-plan.md`
 

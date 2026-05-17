@@ -12,7 +12,6 @@ license = "Apache-2.0"
 license-files = ["LICENSE"]
 dependencies = [
   "defusedxml>=0.7.1",
-  "openai>=2.32.0",
   "pydantic>=2.0.0",
   "tzdata ; platform_system=='Windows'",
 ]
@@ -23,6 +22,9 @@ dev = [
 ]
 mcp = [
   "mcp[cli]>=1.27.1 ; python_version >= '3.10'",
+]
+openai = [
+  "openai>=2.32.0",
 ]
 
 [project.scripts]
@@ -78,6 +80,7 @@ memorywiki-wake-prompt = "generate_wake_prompt:main"
   "docs/launch/github-profile-and-assets.md",
   "docs/launch/github-publication-checklist.md",
   "docs/launch/marketing-plan.md",
+  "docs/launch/public-go-live-runbook.md",
   "docs/launch/release-playbook.md",
   "docs/launch/demo-assets.md",
   "docs/launch/launch-copy.md",

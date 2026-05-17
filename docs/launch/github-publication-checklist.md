@@ -18,6 +18,9 @@ from the local machine.
 - Scan working tree paths, text, archives, and git history for secrets, private
   paths, old project names, and real memory content.
 - Confirm example memory uses synthetic data only.
+- Decide whether to keep current private preparation history, squash it before
+  public launch, or publish from a clean mirror. Do not rewrite history after
+  the repository is public unless a secret exposure requires it.
 
 ## 3. Repository Setup
 
@@ -94,6 +97,9 @@ Prepared assets:
 - `docs/launch/demo-assets.md`
 - `docs/launch/launch-copy.md`
 - `docs/launch/v0.1.0-release-notes.md`
+
+The final public switch runbook lives at
+`docs/launch/public-go-live-runbook.md`.
 
 ## 8. Launch Sequence
 

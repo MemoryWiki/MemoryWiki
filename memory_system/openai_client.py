@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 
-from openai import OpenAI
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
 
 
 class OpenAIChatClient:
@@ -14,6 +17,11 @@ class OpenAIChatClient:
         max_retries=2,
         max_output_tokens=2048,
     ):
+        if OpenAI is None:
+            raise RuntimeError(
+                "OpenAI backend requires the optional OpenAI dependency. "
+                "Install it with: python -m pip install 'memorywiki[openai]'"
+            )
         self.client = OpenAI(
             api_key=api_key,
             base_url=base_url,

@@ -40,7 +40,12 @@ python3 -m pip install -e ".[dev,mcp]"
 python3 -m pip install -e .
 ```
 
-MCP 支持使用可选的 `mcp` extra，建议 Python 3.10+。
+基础安装是纯本地模式，不需要 API key。MCP 支持使用可选的 `mcp` extra，
+建议 Python 3.10+。可选 OpenAI backend 需要单独安装：
+
+```bash
+python3 -m pip install -e ".[openai]"
+```
 
 ## 记忆目录结构
 
@@ -209,6 +214,7 @@ python3 -m pytest tests -q
 - `CODE_OF_CONDUCT.md`
 - `CHANGELOG.md`
 - `docs/launch/github-publication-checklist.md`
+- `docs/launch/public-go-live-runbook.md`
 - `docs/launch/release-playbook.md`
 - `docs/launch/marketing-plan.md`
 

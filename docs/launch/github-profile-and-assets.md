@@ -39,6 +39,13 @@ Prepared assets:
 - `docs/assets/memorywiki-quickstart.gif`
 - `docs/assets/recall-output.svg`
 
+Final replacement targets:
+
+- Avatar: 400x400 PNG, transparent or solid high-contrast background.
+- Social preview: 1280x640 PNG, readable at small card sizes.
+- Keep text minimal; GitHub cards crop differently across surfaces.
+- After replacement, run `python3 -m pytest tests/test_public_clean.py -q`.
+
 Manual GitHub UI steps:
 
 1. Upload `docs/assets/memorywiki-avatar.png` as the account avatar.

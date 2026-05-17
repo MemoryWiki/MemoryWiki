@@ -15,4 +15,5 @@ This note records the review items that were intentionally deferred after the se
 - Memory compaction now sanitizes inputs and validates returned headings.
 - JSONL search skips corrupt rows.
 - File writes use atomic replace or single `os.write` append paths.
-- OpenAI calls have timeout, retry, and output-token limits.
+- The optional OpenAI backend has timeout, retry, and output-token limits, and
+  the base local-first install no longer depends on the OpenAI SDK.
