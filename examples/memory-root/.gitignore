@@ -1,0 +1,5 @@
+.INDEX_DIRTY
+.memory.lock
+.DS_Store
+__pycache__/
+*.tmp

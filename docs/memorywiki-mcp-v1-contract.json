@@ -1,0 +1,1365 @@
+{
+  "schema": "memorywiki-mcp-contract-v1",
+  "generated_at": "2026-05-17T17:04:57+00:00",
+  "transport": [
+    "stdio",
+    "streamable-http"
+  ],
+  "invocation": {
+    "argument": "input",
+    "shape": {
+      "input": "<tool input object>"
+    },
+    "note": "MemoryWiki MCP v1 exposes one top-level tool argument named input."
+  },
+  "write_gates": {
+    "project": [
+      "MEMORY_MCP_WRITE_ENABLED=true"
+    ],
+    "global": [
+      "MEMORY_MCP_WRITE_ENABLED=true",
+      "MEMORY_GLOBAL_WRITE_ENABLED=true"
+    ],
+    "root_override": [
+      "MEMORY_MCP_ALLOW_ROOT_OVERRIDE=true"
+    ]
+  },
+  "tools": [
+    {
+      "name": "memorywiki_recall",
+      "description": "Hybrid recall over project/global MemoryWiki memory.",
+      "read_only": true,
+      "write_gated": "refresh_index_if_needed",
+      "input_model": "RecallInput",
+      "output_model": "RecallOutput",
+      "input_schema": {
+        "properties": {
+          "query": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Query",
+            "type": "string"
+          },
+          "scope": {
+            "default": "all",
+            "enum": [
+              "all",
+              "project",
+              "global"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "limit": {
+            "default": 8,
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "token_budget": {
+            "default": 1200,
+            "maximum": 100000,
+            "minimum": 1,
+            "title": "Token Budget",
+            "type": "integer"
+          },
+          "embedding": {
+            "default": "off",
+            "enum": [
+              "off",
+              "local"
+            ],
+            "title": "Embedding",
+            "type": "string"
+          },
+          "graph": {
+            "default": "local",
+            "enum": [
+              "off",
+              "local"
+            ],
+            "title": "Graph",
+            "type": "string"
+          },
+          "ranker": {
+            "default": "rrf",
+            "enum": [
+              "rrf",
+              "score"
+            ],
+            "title": "Ranker",
+            "type": "string"
+          },
+          "strategy": {
+            "default": "hybrid",
+            "enum": [
+              "live",
+              "indexed",
+              "hybrid"
+            ],
+            "title": "Strategy",
+            "type": "string"
+          },
+          "explain_score": {
+            "default": false,
+            "title": "Explain Score",
+            "type": "boolean"
+          },
+          "refresh_index_if_needed": {
+            "default": false,
+            "title": "Refresh Index If Needed",
+            "type": "boolean"
+          },
+          "project_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Root"
+          },
+          "global_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Global Root"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "RecallInput",
+        "type": "object"
+      },
+      "output_schema": {
+        "$defs": {
+          "RecallHitOutput": {
+            "properties": {
+              "scope": {
+                "title": "Scope",
+                "type": "string"
+              },
+              "source": {
+                "title": "Source",
+                "type": "string"
+              },
+              "identifier": {
+                "title": "Identifier",
+                "type": "string"
+              },
+              "title": {
+                "title": "Title",
+                "type": "string"
+              },
+              "excerpt": {
+                "title": "Excerpt",
+                "type": "string"
+              },
+              "score": {
+                "title": "Score",
+                "type": "number"
+              },
+              "tokens": {
+                "title": "Tokens",
+                "type": "integer"
+              },
+              "provenance": {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "title": "Provenance",
+                "type": "array"
+              },
+              "score_explanation": {
+                "additionalProperties": true,
+                "title": "Score Explanation",
+                "type": "object"
+              }
+            },
+            "required": [
+              "scope",
+              "source",
+              "identifier",
+              "title",
+              "excerpt",
+              "score",
+              "tokens",
+              "provenance"
+            ],
+            "title": "RecallHitOutput",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "strategy": {
+            "title": "Strategy",
+            "type": "string"
+          },
+          "tokens_used": {
+            "title": "Tokens Used",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "hits": {
+            "items": {
+              "$ref": "#/$defs/RecallHitOutput"
+            },
+            "title": "Hits",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query",
+          "strategy",
+          "tokens_used",
+          "truncated"
+        ],
+        "title": "RecallOutput",
+        "type": "object"
+      },
+      "defaults": {
+        "scope": "all",
+        "limit": 8,
+        "token_budget": 1200,
+        "embedding": "off",
+        "graph": "local",
+        "ranker": "rrf",
+        "strategy": "hybrid",
+        "explain_score": false,
+        "refresh_index_if_needed": false,
+        "project_root": null,
+        "global_root": null
+      }
+    },
+    {
+      "name": "memorywiki_read_memory",
+      "description": "Read one MemoryWiki memory item or hot file with sanitized output.",
+      "read_only": true,
+      "write_gated": false,
+      "input_model": "ReadMemoryInput",
+      "output_model": "ReadMemoryOutput",
+      "input_schema": {
+        "properties": {
+          "scope": {
+            "default": "project",
+            "enum": [
+              "project",
+              "global"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "semantic",
+              "procedural",
+              "procedure",
+              "episode",
+              "session",
+              "core",
+              "user",
+              "index",
+              "project_profile"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "identifier": {
+            "default": "",
+            "title": "Identifier",
+            "type": "string"
+          },
+          "max_chars": {
+            "default": 5000,
+            "maximum": 50000,
+            "minimum": 100,
+            "title": "Max Chars",
+            "type": "integer"
+          },
+          "full": {
+            "default": false,
+            "title": "Full",
+            "type": "boolean"
+          },
+          "project_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Root"
+          },
+          "global_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Global Root"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "ReadMemoryInput",
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "found": {
+            "title": "Found",
+            "type": "boolean"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "identifier": {
+            "title": "Identifier",
+            "type": "string"
+          },
+          "content": {
+            "default": "",
+            "title": "Content",
+            "type": "string"
+          },
+          "frontmatter": {
+            "additionalProperties": true,
+            "title": "Frontmatter",
+            "type": "object"
+          },
+          "update_log": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Update Log",
+            "type": "array"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "found",
+          "scope",
+          "kind",
+          "identifier"
+        ],
+        "title": "ReadMemoryOutput",
+        "type": "object"
+      },
+      "defaults": {
+        "scope": "project",
+        "identifier": "",
+        "max_chars": 5000,
+        "full": false,
+        "project_root": null,
+        "global_root": null
+      }
+    },
+    {
+      "name": "memorywiki_index_maintain",
+      "description": "Dry-run or explicitly rebuild MemoryWiki retrieval sidecars.",
+      "read_only": "when write=false",
+      "write_gated": true,
+      "input_model": "IndexMaintainInput",
+      "output_model": "IndexMaintainOutput",
+      "input_schema": {
+        "properties": {
+          "scope": {
+            "default": "all",
+            "enum": [
+              "all",
+              "project",
+              "global"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "write": {
+            "default": false,
+            "title": "Write",
+            "type": "boolean"
+          },
+          "agent": {
+            "default": "memorywiki-mcp",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Agent",
+            "type": "string"
+          },
+          "lease_ttl_seconds": {
+            "default": 3600,
+            "maximum": 86400,
+            "minimum": 1,
+            "title": "Lease Ttl Seconds",
+            "type": "integer"
+          },
+          "project_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Root"
+          },
+          "global_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Global Root"
+          }
+        },
+        "title": "IndexMaintainInput",
+        "type": "object"
+      },
+      "output_schema": {
+        "$defs": {
+          "IndexRootStatus": {
+            "properties": {
+              "scope": {
+                "title": "Scope",
+                "type": "string"
+              },
+              "root": {
+                "title": "Root",
+                "type": "string"
+              },
+              "index_path": {
+                "title": "Index Path",
+                "type": "string"
+              },
+              "status": {
+                "title": "Status",
+                "type": "string"
+              },
+              "fresh": {
+                "title": "Fresh",
+                "type": "boolean"
+              },
+              "needs_rebuild": {
+                "title": "Needs Rebuild",
+                "type": "boolean"
+              },
+              "rebuilt": {
+                "title": "Rebuilt",
+                "type": "boolean"
+              },
+              "indexed": {
+                "title": "Indexed",
+                "type": "integer"
+              },
+              "warnings": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Warnings",
+                "type": "array"
+              },
+              "lease_id": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Lease Id"
+              }
+            },
+            "required": [
+              "scope",
+              "root",
+              "index_path",
+              "status",
+              "fresh",
+              "needs_rebuild",
+              "rebuilt",
+              "indexed"
+            ],
+            "title": "IndexRootStatus",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "rebuild_needed": {
+            "title": "Rebuild Needed",
+            "type": "boolean"
+          },
+          "rebuilt": {
+            "title": "Rebuilt",
+            "type": "boolean"
+          },
+          "roots": {
+            "items": {
+              "$ref": "#/$defs/IndexRootStatus"
+            },
+            "title": "Roots",
+            "type": "array"
+          }
+        },
+        "required": [
+          "dry_run",
+          "scope",
+          "rebuild_needed",
+          "rebuilt",
+          "roots"
+        ],
+        "title": "IndexMaintainOutput",
+        "type": "object"
+      },
+      "defaults": {
+        "scope": "all",
+        "write": false,
+        "agent": "memorywiki-mcp",
+        "lease_ttl_seconds": 3600,
+        "project_root": null,
+        "global_root": null
+      }
+    },
+    {
+      "name": "memorywiki_write_session",
+      "description": "Explicitly save a session summary into MemoryWiki.",
+      "read_only": false,
+      "write_gated": true,
+      "input_model": "WriteSessionInput",
+      "output_model": "WriteSessionOutput",
+      "input_schema": {
+        "properties": {
+          "scope": {
+            "default": "project",
+            "enum": [
+              "project",
+              "global"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "summary": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Summary",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
+          },
+          "keypoints": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Keypoints",
+            "type": "array"
+          },
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Actions",
+            "type": "array"
+          },
+          "pending": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Pending",
+            "type": "array"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 50000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Body"
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "maximum": 86400,
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Duration Seconds"
+          },
+          "write_episode": {
+            "default": true,
+            "title": "Write Episode",
+            "type": "boolean"
+          },
+          "project_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Root"
+          },
+          "global_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Global Root"
+          }
+        },
+        "required": [
+          "summary",
+          "reason"
+        ],
+        "title": "WriteSessionInput",
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": false,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "affected_paths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Paths",
+            "type": "array"
+          },
+          "audit_path": {
+            "default": "audit.jsonl",
+            "title": "Audit Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "session_id"
+        ],
+        "title": "WriteSessionOutput",
+        "type": "object"
+      },
+      "defaults": {
+        "scope": "project",
+        "title": null,
+        "session_id": null,
+        "body": null,
+        "duration_seconds": null,
+        "write_episode": true,
+        "project_root": null,
+        "global_root": null
+      }
+    },
+    {
+      "name": "memorywiki_crystallize",
+      "description": "Crystallize an approved answer into semantic/procedural memory.",
+      "read_only": "when dry_run=true",
+      "write_gated": "when dry_run=false",
+      "input_model": "CrystallizeInput",
+      "output_model": "CrystallizeOutput",
+      "input_schema": {
+        "properties": {
+          "scope": {
+            "default": "project",
+            "enum": [
+              "project",
+              "global"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "kind": {
+            "default": "semantic",
+            "enum": [
+              "semantic",
+              "procedure"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "content": {
+            "maxLength": 50000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "concepts": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Concepts",
+            "type": "array"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Trigger"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Steps",
+            "type": "array"
+          },
+          "source_kind": {
+            "default": "manual",
+            "maxLength": 80,
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_path": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Path"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Id"
+          },
+          "confidence": {
+            "default": 0.8,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "strength": {
+            "default": 0.7,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "type": "number"
+          },
+          "replace": {
+            "default": false,
+            "title": "Replace",
+            "type": "boolean"
+          },
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "project_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Root"
+          },
+          "global_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Global Root"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "content",
+          "reason"
+        ],
+        "title": "CrystallizeInput",
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "affected_paths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Paths",
+            "type": "array"
+          },
+          "replaced": {
+            "default": false,
+            "title": "Replaced",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "scope",
+          "kind",
+          "id",
+          "dry_run"
+        ],
+        "title": "CrystallizeOutput",
+        "type": "object"
+      },
+      "defaults": {
+        "scope": "project",
+        "kind": "semantic",
+        "trigger": null,
+        "source_kind": "manual",
+        "source_path": null,
+        "source_id": null,
+        "confidence": 0.8,
+        "strength": 0.7,
+        "replace": false,
+        "dry_run": true,
+        "project_root": null,
+        "global_root": null
+      }
+    },
+    {
+      "name": "memorywiki_ingest_source",
+      "description": "Ingest one read-only sources/ document with SHA256 provenance.",
+      "read_only": "when dry_run=true",
+      "write_gated": "when dry_run=false",
+      "input_model": "IngestSourceInput",
+      "output_model": "IngestSourceOutput",
+      "input_schema": {
+        "properties": {
+          "scope": {
+            "default": "project",
+            "enum": [
+              "project",
+              "global"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "source": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Source",
+            "type": "string"
+          },
+          "target_kind": {
+            "default": "semantic",
+            "enum": [
+              "semantic",
+              "procedure"
+            ],
+            "title": "Target Kind",
+            "type": "string"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Id"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "maxLength": 50000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Summary"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "concepts": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Concepts",
+            "type": "array"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Trigger"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Steps",
+            "type": "array"
+          },
+          "confidence": {
+            "default": 0.75,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence",
+            "type": "number"
+          },
+          "strength": {
+            "default": 0.6,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength",
+            "type": "number"
+          },
+          "conflict_with": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conflict With"
+          },
+          "conflict_note": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conflict Note"
+          },
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "project_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Root"
+          },
+          "global_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Global Root"
+          }
+        },
+        "required": [
+          "source",
+          "reason"
+        ],
+        "title": "IngestSourceInput",
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "source_path": {
+            "title": "Source Path",
+            "type": "string"
+          },
+          "source_sha256": {
+            "title": "Source Sha256",
+            "type": "string"
+          },
+          "source_bytes": {
+            "title": "Source Bytes",
+            "type": "integer"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "affected_paths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Paths",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scope",
+          "source_path",
+          "source_sha256",
+          "source_bytes",
+          "dry_run"
+        ],
+        "title": "IngestSourceOutput",
+        "type": "object"
+      },
+      "defaults": {
+        "scope": "project",
+        "target_kind": "semantic",
+        "id": null,
+        "title": null,
+        "summary": null,
+        "trigger": null,
+        "confidence": 0.75,
+        "strength": 0.6,
+        "conflict_with": null,
+        "conflict_note": null,
+        "dry_run": true,
+        "project_root": null,
+        "global_root": null
+      }
+    },
+    {
+      "name": "memorywiki_forget",
+      "description": "Dry-run or apply audited memory deletion.",
+      "read_only": "when dry_run=true",
+      "write_gated": "when dry_run=false",
+      "input_model": "ForgetInput",
+      "output_model": "ForgetOutput",
+      "input_schema": {
+        "properties": {
+          "scope": {
+            "default": "project",
+            "enum": [
+              "project",
+              "global"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "semantic",
+              "procedure",
+              "session",
+              "episode"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "identifier": {
+            "title": "Identifier",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "dry_run": {
+            "default": true,
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "project_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Root"
+          },
+          "global_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Global Root"
+          }
+        },
+        "required": [
+          "kind",
+          "identifier",
+          "reason"
+        ],
+        "title": "ForgetInput",
+        "type": "object"
+      },
+      "output_schema": {
+        "properties": {
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "identifier": {
+            "title": "Identifier",
+            "type": "string"
+          },
+          "dry_run": {
+            "title": "Dry Run",
+            "type": "boolean"
+          },
+          "existed": {
+            "title": "Existed",
+            "type": "boolean"
+          },
+          "deleted": {
+            "title": "Deleted",
+            "type": "boolean"
+          },
+          "affected_paths": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Paths",
+            "type": "array"
+          },
+          "audit_path": {
+            "default": "audit.jsonl",
+            "title": "Audit Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "kind",
+          "identifier",
+          "dry_run",
+          "existed",
+          "deleted"
+        ],
+        "title": "ForgetOutput",
+        "type": "object"
+      },
+      "defaults": {
+        "scope": "project",
+        "dry_run": true,
+        "project_root": null,
+        "global_root": null
+      }
+    }
+  ],
+  "contract_sha256": "f5e79cdf40ef0c9fcc85acf0e20ed8c745cb82b4f61be96b4adee28d58d020c6"
+}

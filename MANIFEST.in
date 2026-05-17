@@ -1,0 +1,10 @@
+include README.md README.zh.md LICENSE CHANGELOG.md SECURITY.md CONTRIBUTING.md CODE_OF_CONDUCT.md
+include pyproject.toml
+recursive-include docs *
+recursive-include examples *
+recursive-include benchmarks *
+recursive-exclude * __pycache__ *.py[cod] .DS_Store
+prune .git
+prune .pytest_cache
+prune build
+prune dist

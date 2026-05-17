@@ -1,0 +1,3 @@
+# Update this if repository ownership moves to an organization or maintainer
+# team before enabling CODEOWNERS as a required review gate.
+* @MemoryWiki

@@ -1,0 +1,29 @@
+name: Privacy or security report
+description: Report a privacy, safety, or security concern without posting secrets.
+title: "[Security]: "
+labels:
+  - security
+  - privacy
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste real secrets, tokens, passwords, private memory files, or private paths.
+        If this is sensitive, use the repository security policy once the public repo is live.
+  - type: textarea
+    id: concern
+    attributes:
+      label: Concern
+      description: What privacy or security behavior looks wrong?
+    validations:
+      required: true
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential impact
+      description: What could an attacker or unintended reader learn or do?
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Safe reproduction
+      description: Use synthetic data only.

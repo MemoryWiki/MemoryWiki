@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "memorywiki-memory": {
+      "command": "python3",
+      "args": ["-m", "memorywiki_mcp", "--transport", "stdio"],
+      "cwd": "/absolute/path/to/MemoryWIKI",
+      "env": {
+        "PYTHONPATH": "/absolute/path/to/MemoryWIKI",
+        "MEMORY_BACKEND": "local",
+        "MEMORY_PROJECT_ROOT": "/absolute/path/to/your-project/.agent_memory/project",
+        "MEMORY_GLOBAL_ROOT": "/absolute/path/to/global-memory",
+        "MEMORY_TIMEZONE": "UTC"
+      }
+    }
+  }
+}

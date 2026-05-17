@@ -1,0 +1,179 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "memorywiki"
+version = "0.1.0"
+description = "Local-first Memory Wiki for AI agents"
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+dependencies = [
+  "defusedxml>=0.7.1",
+  "openai>=2.32.0",
+  "pydantic>=2.0.0",
+  "tzdata ; platform_system=='Windows'",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+]
+mcp = [
+  "mcp[cli]>=1.27.1 ; python_version >= '3.10'",
+]
+
+[project.scripts]
+memorywiki-agents-review-prompt = "agents_review_prompt:main"
+memorywiki-backup = "memory_backup:main"
+memorywiki-crystallize = "memory_crystallize:main"
+memorywiki-crystallize-candidates = "memory_crystallize_candidates:main"
+memorywiki-cross-project-install = "memorywiki_cross_project_install:main"
+memorywiki-feedback = "memory_feedback:main"
+memorywiki-forget = "memory_forget:main"
+memorywiki-golden-eval = "retrieval_golden_eval:main"
+memorywiki-health = "memory_health:main"
+memorywiki-index-build = "memory_index_build:main"
+memorywiki-index-maintain = "memory_index_maintain:main"
+memorywiki-ingest-source = "source_ingest:main"
+memorywiki-knowledge-ops = "memorywiki_knowledge_ops:main"
+memorywiki-lifecycle = "memory_lifecycle:main"
+memorywiki-mcp = "memorywiki_mcp.cli:main"
+memorywiki-mcp-contract = "memorywiki_mcp_contract:main"
+memorywiki-mcp-doctor = "memorywiki_mcp_doctor:main"
+memorywiki-mcp-config = "memorywiki_mcp.client_config:main"
+memorywiki-mcp-smoke = "memorywiki_mcp.smoke_client:main"
+memorywiki-ops-dashboard = "memorywiki_ops_dashboard:main"
+memorywiki-project-agents = "project_agents:main"
+memorywiki-project-matrix = "memorywiki_project_matrix:main"
+memorywiki-project-profile = "project_profile:main"
+memorywiki-quality-report = "memorywiki_quality_report:main"
+memorywiki-recall = "memory_recall:main"
+memorywiki-release-check = "memorywiki_release_check:main"
+memorywiki-release-manifest = "memorywiki_release_manifest:main"
+memorywiki-restore-check = "memorywiki_restore_check:main"
+memorywiki-review = "memory_review:main"
+memorywiki-session-summary = "session_summary:main"
+memorywiki-timeline = "memory_timeline:main"
+memorywiki-wake-prompt = "generate_wake_prompt:main"
+
+[tool.setuptools.data-files]
+"memorywiki/docs" = [
+  "docs/demo-cross-project-recall.md",
+  "docs/memory_review_followups.md",
+  "docs/memorywiki-golden-cases.json",
+  "docs/memorywiki-mcp-client-setup.md",
+  "docs/memorywiki-mcp-v1-contract.json",
+  "docs/memorywiki-mcp-v1-spec.md",
+]
+"memorywiki/docs/benchmarks" = [
+  "docs/benchmarks/mini-benchmark-results.md",
+]
+"memorywiki/docs/launch" = [
+  "docs/launch/github-publication-checklist.md",
+  "docs/launch/marketing-plan.md",
+  "docs/launch/release-playbook.md",
+]
+"memorywiki/benchmarks" = [
+  "benchmarks/mini_recall_benchmark.py",
+]
+"memorywiki/examples" = [
+  "examples/project-matrix.example.json",
+]
+"memorywiki/examples/mcp" = [
+  "examples/mcp/.mcp.example.json",
+]
+"memorywiki/examples/memory-root" = [
+  "examples/memory-root/.gitignore",
+  "examples/memory-root/INDEX.md",
+  "examples/memory-root/MEMORY.md",
+]
+"memorywiki/examples/memory-root/episodes" = [
+  "examples/memory-root/episodes/2026-05-17.md",
+]
+"memorywiki/examples/memory-root/procedures" = [
+  "examples/memory-root/procedures/explicit-save.md",
+]
+"memorywiki/examples/memory-root/retrieval" = [
+  "examples/memory-root/retrieval/index.jsonl",
+]
+"memorywiki/examples/memory-root/semantic" = [
+  "examples/memory-root/semantic/cross-project-recall.md",
+  "examples/memory-root/semantic/lifecycle-governance.md",
+  "examples/memory-root/semantic/memorywiki-overview.md",
+  "examples/memory-root/semantic/memorywiki-pkm-positioning.md",
+  "examples/memory-root/semantic/operator-quality-loop.md",
+  "examples/memory-root/semantic/privacy-public-clean.md",
+  "examples/memory-root/semantic/source-ingest-provenance.md",
+]
+"memorywiki/examples/memory-root/sessions" = [
+  "examples/memory-root/sessions/session-20260517-000000.md",
+]
+"memorywiki/examples/demo-project" = [
+  "examples/demo-project/.mcp.json",
+  "examples/demo-project/README.md",
+]
+"memorywiki/examples/demo-project/.agent_memory/project" = [
+  "examples/demo-project/.agent_memory/project/INDEX.md",
+  "examples/demo-project/.agent_memory/project/MEMORY.md",
+]
+"memorywiki/examples/demo-project/.agent_memory/project/episodes" = [
+  "examples/demo-project/.agent_memory/project/episodes/2026-05-17.md",
+]
+"memorywiki/examples/demo-project/.agent_memory/project/retrieval" = [
+  "examples/demo-project/.agent_memory/project/retrieval/index.jsonl",
+]
+"memorywiki/examples/demo-project/.agent_memory/project/semantic" = [
+  "examples/demo-project/.agent_memory/project/semantic/memorywiki-overview.md",
+]
+"memorywiki/examples/demo-project/.agent_memory/project/sessions" = [
+  "examples/demo-project/.agent_memory/project/sessions/session-20260517-000000.md",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools]
+py-modules = [
+  "agent_leases",
+  "agents_review_prompt",
+  "demo_chat",
+  "generate_wake_prompt",
+  "memory_backup",
+  "memory_crystallize",
+  "memory_crystallize_candidates",
+  "memory_feedback",
+  "memory_forget",
+  "memory_health",
+  "memory_index_build",
+  "memory_index_maintain",
+  "memory_lifecycle",
+  "memory_recall",
+  "memory_review",
+  "memory_timeline",
+  "memorywiki_cross_project_install",
+  "memorywiki_knowledge_ops",
+  "memorywiki_mcp_contract",
+  "memorywiki_mcp_doctor",
+  "memorywiki_operator_env",
+  "memorywiki_ops_dashboard",
+  "memorywiki_project_matrix",
+  "memorywiki_quality_report",
+  "memorywiki_release_check",
+  "memorywiki_release_manifest",
+  "memorywiki_restore_check",
+  "merge_episodes",
+  "project_agents",
+  "project_profile",
+  "retrieval_golden_eval",
+  "session_summary",
+  "source_ingest",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["memory_system*", "memorywiki_mcp*"]
+exclude = ["tests*"]

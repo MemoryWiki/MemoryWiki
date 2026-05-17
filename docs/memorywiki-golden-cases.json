@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "description": "MemoryWiki retrieval golden cases. Global cases are always loaded; project-specific cases are merged when the project root path or basename matches.",
+  "global": [
+    {
+      "name": "memorywiki-mcp",
+      "query": "MemoryWiki MCP client bridge retrieval enhancement",
+      "expected": [
+        "memorywiki-pkm-positioning",
+        "memorywiki-overview"
+      ],
+      "tags": [
+        "memorywiki",
+        "mcp"
+      ],
+      "required": true,
+      "min_rank": 3,
+      "severity": "core",
+      "owner": "memorywiki",
+      "project": "global"
+    },
+    {
+      "name": "memorywiki-pkm-positioning",
+      "query": "MemoryWiki local-first chat memory personal knowledge management source ingest crystallize",
+      "expected": [
+        "memorywiki-pkm-positioning"
+      ],
+      "tags": [
+        "memorywiki",
+        "pkm"
+      ],
+      "required": true,
+      "min_rank": 3,
+      "severity": "core",
+      "owner": "memorywiki",
+      "project": "global"
+    },
+    {
+      "name": "source-ingest-provenance",
+      "query": "MemoryWiki source ingest SHA256 provenance tamper evidence",
+      "expected": [
+        "source-ingest-provenance",
+        "source-sha256"
+      ],
+      "tags": [
+        "memorywiki",
+        "source-ingest"
+      ],
+      "required": true,
+      "min_rank": 3,
+      "severity": "core",
+      "owner": "memorywiki",
+      "project": "global"
+    },
+    {
+      "name": "lifecycle-governance",
+      "query": "MemoryWiki lifecycle review stale weak memory archival governance",
+      "expected": [
+        "lifecycle-governance",
+        "memory-lifecycle"
+      ],
+      "tags": [
+        "memorywiki",
+        "lifecycle"
+      ],
+      "required": true,
+      "min_rank": 3,
+      "severity": "core",
+      "owner": "memorywiki",
+      "project": "global"
+    },
+    {
+      "name": "cross-project-recall",
+      "query": "MemoryWiki cross project recall MCP startup bridge",
+      "expected": [
+        "cross-project-recall",
+        "memorywiki-mcp"
+      ],
+      "tags": [
+        "memorywiki",
+        "mcp"
+      ],
+      "required": true,
+      "min_rank": 3,
+      "severity": "core",
+      "owner": "memorywiki",
+      "project": "global"
+    },
+    {
+      "name": "privacy-public-clean",
+      "query": "MemoryWiki public release privacy scan private path marker cleanup",
+      "expected": [
+        "privacy-public-clean"
+      ],
+      "tags": [
+        "memorywiki",
+        "privacy"
+      ],
+      "required": false,
+      "min_rank": 8,
+      "severity": "watch",
+      "owner": "memorywiki",
+      "project": "global"
+    },
+    {
+      "name": "operator-quality-loop",
+      "query": "MemoryWiki operator dashboard quality report golden eval review loop",
+      "expected": [
+        "operator-quality-loop"
+      ],
+      "tags": [
+        "memorywiki",
+        "quality"
+      ],
+      "required": false,
+      "min_rank": 8,
+      "severity": "watch",
+      "owner": "memorywiki",
+      "project": "global"
+    }
+  ],
+  "projects": {}
+}
