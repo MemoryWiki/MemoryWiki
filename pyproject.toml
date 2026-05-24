@@ -10,22 +10,45 @@ readme = "README.md"
 requires-python = ">=3.9"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
+authors = [{name = "MemoryWiki Maintainers", email = "maintainers@memorywiki.dev"}]
+keywords = ["agent-memory", "local-first", "mcp", "knowledge-management"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
 dependencies = [
-  "defusedxml>=0.7.1",
-  "pydantic>=2.0.0",
-  "tzdata ; platform_system=='Windows'",
+  "defusedxml>=0.7.1,<1.0.0",
+  "pydantic>=2.0.0,<3.0.0",
+  "tzdata>=2024.1,<2027.0 ; platform_system=='Windows'",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.0.0",
+  "mypy>=1.10.0,<2.0.0",
+  "pre-commit>=3.5.0,<5.0.0",
+  "pytest>=8.0.0,<9.0.0",
+  "ruff>=0.4.0,<1.0.0",
 ]
 mcp = [
-  "mcp[cli]>=1.27.1 ; python_version >= '3.10'",
+  "mcp[cli]>=1.27.1,<2.0.0 ; python_version >= '3.10'",
 ]
 openai = [
-  "openai>=2.32.0",
+  "openai>=2.32.0,<3.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/MemoryWiki/MemoryWiki"
+Documentation = "https://github.com/MemoryWiki/MemoryWiki/tree/main/docs"
+Repository = "https://github.com/MemoryWiki/MemoryWiki"
+Changelog = "https://github.com/MemoryWiki/MemoryWiki/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/MemoryWiki/MemoryWiki/issues"
 
 [project.scripts]
 memorywiki-agents-review-prompt = "agents_review_prompt:main"
@@ -42,6 +65,7 @@ memorywiki-index-maintain = "memory_index_maintain:main"
 memorywiki-ingest-source = "source_ingest:main"
 memorywiki-knowledge-ops = "memorywiki_knowledge_ops:main"
 memorywiki-lifecycle = "memory_lifecycle:main"
+memorywiki-list = "memorywiki_list:main"
 memorywiki-mcp = "memorywiki_mcp.cli:main"
 memorywiki-mcp-contract = "memorywiki_mcp_contract:main"
 memorywiki-mcp-doctor = "memorywiki_mcp_doctor:main"
@@ -69,13 +93,17 @@ memorywiki-wake-prompt = "generate_wake_prompt:main"
   "docs/demo-cross-project-recall.md",
   "docs/demo-60-second-script.md",
   "docs/faq.md",
-  "docs/first-week-feedback.md",
   "docs/install.md",
-  "docs/memory_review_followups.md",
   "docs/memorywiki-golden-cases.json",
   "docs/memorywiki-mcp-client-setup.md",
   "docs/memorywiki-mcp-v1-contract.json",
   "docs/memorywiki-mcp-v1-spec.md",
+]
+"memorywiki/docs/getting-started" = [
+  "docs/getting-started/quickstart.md",
+]
+"memorywiki/docs/troubleshooting" = [
+  "docs/troubleshooting/common-errors.md",
 ]
 "memorywiki/docs/clients" = [
   "docs/clients/claude-desktop.md",
@@ -86,15 +114,19 @@ memorywiki-wake-prompt = "generate_wake_prompt:main"
 "memorywiki/docs/benchmarks" = [
   "docs/benchmarks/mini-benchmark-results.md",
 ]
-"memorywiki/docs/launch" = [
-  "docs/launch/github-profile-and-assets.md",
-  "docs/launch/github-publication-checklist.md",
-  "docs/launch/marketing-plan.md",
-  "docs/launch/public-go-live-runbook.md",
-  "docs/launch/release-playbook.md",
-  "docs/launch/demo-assets.md",
-  "docs/launch/launch-copy.md",
-  "docs/launch/v0.1.0-release-notes.md",
+"memorywiki/docs/internal" = [
+  "docs/internal/first-week-feedback.md",
+  "docs/internal/memory_review_followups.md",
+]
+"memorywiki/docs/internal/launch" = [
+  "docs/internal/launch/github-profile-and-assets.md",
+  "docs/internal/launch/github-publication-checklist.md",
+  "docs/internal/launch/marketing-plan.md",
+  "docs/internal/launch/public-go-live-runbook.md",
+  "docs/internal/launch/release-playbook.md",
+  "docs/internal/launch/demo-assets.md",
+  "docs/internal/launch/launch-copy.md",
+  "docs/internal/launch/v0.1.0-release-notes.md",
 ]
 "memorywiki/docs/assets" = [
   "docs/assets/memorywiki-avatar.png",
@@ -179,6 +211,7 @@ py-modules = [
   "memory_index_build",
   "memory_index_maintain",
   "memory_lifecycle",
+  "memorywiki_list",
   "memory_recall",
   "memory_review",
   "memory_timeline",
@@ -205,3 +238,27 @@ py-modules = [
 where = ["."]
 include = ["memory_system*", "memorywiki_mcp*"]
 exclude = ["tests*"]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["F", "E", "W"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"memorywiki_mcp/tools.py" = ["E402"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+ignore_missing_imports = true

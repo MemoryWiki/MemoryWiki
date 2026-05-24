@@ -21,6 +21,23 @@ MCP support requires Python 3.10 or newer. If you only want the core CLI, use:
 python3 -m pip install -e .
 ```
 
+## Compatibility Matrix
+
+| Feature | Python 3.9 | Python 3.10+ | Notes |
+| --- | --- | --- | --- |
+| Core CLI | Yes | Yes | Local files, recall, list, index, backup |
+| MCP server | No | Yes | Install with `.[mcp]` |
+| OpenAI optional backend | Yes | Yes | Install with `.[openai]` and set credentials |
+| Development tooling | Yes | Yes | Install with `.[dev]` |
+
+## Platform Notes
+
+- **macOS/Linux**: use `python3 -m venv .venv` and activate with
+  `. .venv/bin/activate`.
+- **Windows PowerShell**: use `py -3.12 -m venv .venv` and activate with
+  `.venv\Scripts\Activate.ps1`.
+- **All platforms**: run `python -m pip install -U pip` before installing extras.
+
 ## Isolated Virtual Environment
 
 ```bash
@@ -75,3 +92,4 @@ memorywiki-golden-eval --project-root examples/memory-root --global-root example
   `memorywiki-index-maintain --project-root <root> --scope project --write`.
 - If you are testing real project memory, start with project scope before adding
   a global memory root.
+- For more cases, see `docs/troubleshooting/common-errors.md`.

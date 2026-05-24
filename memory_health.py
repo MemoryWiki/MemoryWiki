@@ -9,7 +9,6 @@ import json
 from pathlib import Path
 import re
 import sys
-from typing import Iterable
 
 from memory_system.models import ProceduralMemory, SemanticMemory, SourceRef
 from memory_system.paths import MemoryScopePaths

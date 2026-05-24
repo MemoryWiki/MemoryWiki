@@ -80,7 +80,9 @@ python3 -m pip install -e ".[openai]"
 ```
 
 More install paths, including GitHub tag installs and clean-room checks, are in
-`docs/install.md`.
+`docs/install.md`. A fuller first-run guide is in
+`docs/getting-started/quickstart.md`, and common setup failures are covered in
+`docs/troubleshooting/common-errors.md`.
 
 ## Architecture
 
@@ -145,6 +147,16 @@ memorywiki-index-maintain \
 
 Add `--write` only when you intentionally want to rebuild missing, stale, or
 tampered indexes.
+
+List memory inventory without reading full memory bodies:
+
+```bash
+memorywiki-list \
+  --project-root examples/memory-root \
+  --scope project \
+  --kind semantic \
+  --format table
+```
 
 Save a session summary after explicit approval:
 
@@ -247,10 +259,12 @@ Public-release preparation lives in:
 - `CODE_OF_CONDUCT.md`
 - `CHANGELOG.md`
 - `docs/faq.md`
-- `docs/first-week-feedback.md`
-- `docs/launch/github-publication-checklist.md`
-- `docs/launch/public-go-live-runbook.md`
-- `docs/launch/release-playbook.md`
-- `docs/launch/marketing-plan.md`
+- `docs/getting-started/quickstart.md`
+- `docs/troubleshooting/common-errors.md`
+- `docs/internal/first-week-feedback.md`
+- `docs/internal/launch/github-publication-checklist.md`
+- `docs/internal/launch/public-go-live-runbook.md`
+- `docs/internal/launch/release-playbook.md`
+- `docs/internal/launch/marketing-plan.md`
 
 License: Apache-2.0.

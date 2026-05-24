@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Literal, Optional
 import re
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -45,6 +45,34 @@ class RecallOutput(BaseModel):
     truncated: bool
     warnings: List[str] = Field(default_factory=list)
     hits: List[RecallHitOutput] = Field(default_factory=list)
+
+
+class ListInput(BaseModel):
+    scope: Literal["all", "project", "global"] = "project"
+    kind: Literal["all", "semantic", "procedural", "procedure", "session", "episode"] = "all"
+    concepts: List[str] = Field(default_factory=list, max_length=50)
+    limit: int = Field(default=100, ge=1, le=500)
+    project_root: Optional[str] = None
+    global_root: Optional[str] = None
+
+
+class ListMemoryItem(BaseModel):
+    scope: str
+    kind: str
+    identifier: str
+    title: str
+    created_at: str = ""
+    updated_at: str = ""
+    concepts: List[str] = Field(default_factory=list)
+    confidence: Optional[float] = None
+    strength: Optional[float] = None
+
+
+class ListOutput(BaseModel):
+    scope: str
+    kind: str
+    count: int
+    memories: List[ListMemoryItem] = Field(default_factory=list)
 
 
 class ReadMemoryInput(BaseModel):

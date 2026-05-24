@@ -15,6 +15,7 @@ if str(MEMORYWIKI_ROOT) not in sys.path:
     sys.path.insert(0, str(MEMORYWIKI_ROOT))
 
 from memory_index_maintain import maintain_indexes
+from memorywiki_list import entries_to_dicts, list_memories
 from memory_recall import recall as recall_memory
 from memory_system.models import (
     AuditEntry,
@@ -47,6 +48,9 @@ from memorywiki_mcp.schema import (
     IndexRootStatus,
     IngestSourceInput,
     IngestSourceOutput,
+    ListInput,
+    ListMemoryItem,
+    ListOutput,
     ReadMemoryInput,
     ReadMemoryOutput,
     RecallHitOutput,
@@ -403,6 +407,39 @@ def memorywiki_recall(input_model: RecallInput) -> RecallOutput:
         truncated=result.truncated,
         warnings=[safe_output_text(warning) for warning in result.warnings],
         hits=hits,
+    )
+
+
+def memorywiki_list(input_model: ListInput) -> ListOutput:
+    screen_tool_input("memorywiki_list", input_model.model_dump())
+    entries = list_memories(
+        project_root=resolve_project_root(input_model.project_root),
+        global_root=resolve_global_root(input_model.global_root),
+        scope=input_model.scope,
+        kind=input_model.kind,
+        concepts=input_model.concepts,
+        limit=input_model.limit,
+    )
+    rows = []
+    for payload in entries_to_dicts(entries):
+        rows.append(
+            ListMemoryItem(
+                scope=safe_output_text(payload["scope"]),
+                kind=safe_output_text(payload["kind"]),
+                identifier=safe_output_text(payload["identifier"]),
+                title=safe_output_text(payload["title"]),
+                created_at=safe_output_text(payload["created_at"]),
+                updated_at=safe_output_text(payload["updated_at"]),
+                concepts=[safe_output_text(concept) for concept in payload["concepts"]],
+                confidence=payload["confidence"],
+                strength=payload["strength"],
+            )
+        )
+    return ListOutput(
+        scope=safe_output_text(input_model.scope),
+        kind=safe_output_text(input_model.kind),
+        count=len(rows),
+        memories=rows,
     )
 
 

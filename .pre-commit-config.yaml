@@ -1,0 +1,15 @@
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: python -m ruff check . --fix
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi]
+      - id: mypy-memorywiki-mcp
+        name: mypy MemoryWiki MCP surface
+        entry: python -m mypy memorywiki_list.py memorywiki_mcp/schema.py memorywiki_mcp/server.py memorywiki_mcp_contract.py --follow-imports=silent
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi]

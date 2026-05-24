@@ -62,11 +62,6 @@ def test_generate_wake_prompt_includes_global_and_project_recent_session_files(t
         sanitize_on_write=True,
         secure_permissions=False,
     )
-    project_store = ScopedMemoryStore(
-        MemoryScopePaths.from_root(project_root, scope="project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
     global_store.append_to_episode(
         "2026-05-08", "09:00 Global session", "- Global episode hint."
     )

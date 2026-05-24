@@ -45,7 +45,7 @@ Current private-repo status:
 - Wiki and Projects are disabled.
 - Dependabot vulnerability alerts are enabled.
 - Account avatar/social preview/profile fields are prepared in
-  `docs/launch/github-profile-and-assets.md`; applying avatar/profile changes
+  `docs/internal/launch/github-profile-and-assets.md`; applying avatar/profile changes
   requires GitHub Settings or a token with `user` scope.
 - Branch protection, secret scanning, push protection, and private
   vulnerability reporting must be rechecked after the repository is public or
@@ -93,13 +93,13 @@ Prepared assets:
 - `docs/assets/memorywiki-avatar.png`
 - `docs/assets/memorywiki-social-preview.png`
 - `docs/assets/recall-output.svg`
-- `docs/launch/github-profile-and-assets.md`
-- `docs/launch/demo-assets.md`
-- `docs/launch/launch-copy.md`
-- `docs/launch/v0.1.0-release-notes.md`
+- `docs/internal/launch/github-profile-and-assets.md`
+- `docs/internal/launch/demo-assets.md`
+- `docs/internal/launch/launch-copy.md`
+- `docs/internal/launch/v0.1.0-release-notes.md`
 
 The final public switch runbook lives at
-`docs/launch/public-go-live-runbook.md`.
+`docs/internal/launch/public-go-live-runbook.md`.
 
 ## 8. Launch Sequence
 

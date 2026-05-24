@@ -15,9 +15,10 @@ from memorywiki_mcp.server import TOOL_NAMES, create_server, run_server, tool_sp
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_mcp_v1_exposes_seven_tools():
+def test_mcp_v1_exposes_eight_tools():
     assert TOOL_NAMES == (
         "memorywiki_recall",
+        "memorywiki_list",
         "memorywiki_read_memory",
         "memorywiki_index_maintain",
         "memorywiki_write_session",
@@ -32,6 +33,7 @@ def test_tool_specs_mark_read_and_write_capabilities():
 
     assert set(specs) == set(TOOL_NAMES)
     assert specs["memorywiki_recall"]["read_only"] is True
+    assert specs["memorywiki_list"]["read_only"] is True
     assert specs["memorywiki_read_memory"]["read_only"] is True
     assert specs["memorywiki_index_maintain"]["write_gated"] is True
     assert specs["memorywiki_write_session"]["write_gated"] is True

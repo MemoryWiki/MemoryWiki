@@ -52,6 +52,8 @@ python3 -m pip install -e ".[openai]"
 ```
 
 更多安装方式，包括 GitHub tag 安装和 clean-room 检查，见 `docs/install.md`。
+完整首次使用指南见 `docs/getting-started/quickstart.md`，常见问题排查见
+`docs/troubleshooting/common-errors.md`。
 
 ## 记忆目录结构
 
@@ -118,6 +120,16 @@ memorywiki-index-maintain \
   --scope project \
   --write \
   --format human
+```
+
+列出记忆目录，不读取完整正文：
+
+```bash
+memorywiki-list \
+  --project-root examples/memory-root \
+  --scope project \
+  --kind semantic \
+  --format table
 ```
 
 显式保存一轮会话总结：
@@ -228,11 +240,13 @@ python3 -m pytest tests -q
 - `CODE_OF_CONDUCT.md`
 - `CHANGELOG.md`
 - `docs/faq.md`
-- `docs/first-week-feedback.md`
-- `docs/launch/github-publication-checklist.md`
-- `docs/launch/public-go-live-runbook.md`
-- `docs/launch/release-playbook.md`
-- `docs/launch/marketing-plan.md`
+- `docs/getting-started/quickstart.md`
+- `docs/troubleshooting/common-errors.md`
+- `docs/internal/first-week-feedback.md`
+- `docs/internal/launch/github-publication-checklist.md`
+- `docs/internal/launch/public-go-live-runbook.md`
+- `docs/internal/launch/release-playbook.md`
+- `docs/internal/launch/marketing-plan.md`
 
 ## 安全模型
 

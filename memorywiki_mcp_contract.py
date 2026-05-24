@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import hashlib
 import json
 import os
-from pathlib import Path
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
+
+from pydantic import BaseModel
 
 from memorywiki_mcp.schema import (
     CrystallizeInput,
@@ -18,6 +20,8 @@ from memorywiki_mcp.schema import (
     IndexMaintainOutput,
     IngestSourceInput,
     IngestSourceOutput,
+    ListInput,
+    ListOutput,
     ReadMemoryInput,
     ReadMemoryOutput,
     RecallInput,
@@ -29,8 +33,9 @@ from memorywiki_mcp.server import TOOL_NAMES, tool_specs
 
 
 SCHEMA = "memorywiki-mcp-contract-v1"
-INPUT_MODELS = {
+INPUT_MODELS: dict[str, type[BaseModel]] = {
     "memorywiki_recall": RecallInput,
+    "memorywiki_list": ListInput,
     "memorywiki_read_memory": ReadMemoryInput,
     "memorywiki_index_maintain": IndexMaintainInput,
     "memorywiki_write_session": WriteSessionInput,
@@ -38,8 +43,9 @@ INPUT_MODELS = {
     "memorywiki_ingest_source": IngestSourceInput,
     "memorywiki_forget": ForgetInput,
 }
-OUTPUT_MODELS = {
+OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "memorywiki_recall": RecallOutput,
+    "memorywiki_list": ListOutput,
     "memorywiki_read_memory": ReadMemoryOutput,
     "memorywiki_index_maintain": IndexMaintainOutput,
     "memorywiki_write_session": WriteSessionOutput,

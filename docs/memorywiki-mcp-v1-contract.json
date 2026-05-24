@@ -1,6 +1,6 @@
 {
   "schema": "memorywiki-mcp-contract-v1",
-  "generated_at": "2026-05-17T17:04:57+00:00",
+  "generated_at": "2026-05-24T07:09:05+00:00",
   "transport": [
     "stdio",
     "streamable-http"
@@ -253,6 +253,190 @@
         "strategy": "hybrid",
         "explain_score": false,
         "refresh_index_if_needed": false,
+        "project_root": null,
+        "global_root": null
+      }
+    },
+    {
+      "name": "memorywiki_list",
+      "description": "List MemoryWiki memories by scope, kind, or concept.",
+      "read_only": true,
+      "write_gated": false,
+      "input_model": "ListInput",
+      "output_model": "ListOutput",
+      "input_schema": {
+        "properties": {
+          "scope": {
+            "default": "project",
+            "enum": [
+              "all",
+              "project",
+              "global"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "kind": {
+            "default": "all",
+            "enum": [
+              "all",
+              "semantic",
+              "procedural",
+              "procedure",
+              "session",
+              "episode"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "concepts": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Concepts",
+            "type": "array"
+          },
+          "limit": {
+            "default": 100,
+            "maximum": 500,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "project_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Root"
+          },
+          "global_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Global Root"
+          }
+        },
+        "title": "ListInput",
+        "type": "object"
+      },
+      "output_schema": {
+        "$defs": {
+          "ListMemoryItem": {
+            "properties": {
+              "scope": {
+                "title": "Scope",
+                "type": "string"
+              },
+              "kind": {
+                "title": "Kind",
+                "type": "string"
+              },
+              "identifier": {
+                "title": "Identifier",
+                "type": "string"
+              },
+              "title": {
+                "title": "Title",
+                "type": "string"
+              },
+              "created_at": {
+                "default": "",
+                "title": "Created At",
+                "type": "string"
+              },
+              "updated_at": {
+                "default": "",
+                "title": "Updated At",
+                "type": "string"
+              },
+              "concepts": {
+                "items": {
+                  "type": "string"
+                },
+                "title": "Concepts",
+                "type": "array"
+              },
+              "confidence": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Confidence"
+              },
+              "strength": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Strength"
+              }
+            },
+            "required": [
+              "scope",
+              "kind",
+              "identifier",
+              "title"
+            ],
+            "title": "ListMemoryItem",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "memories": {
+            "items": {
+              "$ref": "#/$defs/ListMemoryItem"
+            },
+            "title": "Memories",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scope",
+          "kind",
+          "count"
+        ],
+        "title": "ListOutput",
+        "type": "object"
+      },
+      "defaults": {
+        "scope": "project",
+        "kind": "all",
+        "limit": 100,
         "project_root": null,
         "global_root": null
       }
@@ -1361,5 +1545,5 @@
       }
     }
   ],
-  "contract_sha256": "f5e79cdf40ef0c9fcc85acf0e20ed8c745cb82b4f61be96b4adee28d58d020c6"
+  "contract_sha256": "f8c6d65a7f4a694c743e536dc3fe7b6a52852f749631c17a10696158adb629fb"
 }

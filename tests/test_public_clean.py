@@ -36,7 +36,14 @@ FORBIDDEN_MARKERS = [
 ]
 
 
-SKIP_DIRS = {".git", "__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache"}
+SKIP_DIRS = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".qodercn",
+    ".ruff_cache",
+    "__pycache__",
+}
 SKIP_SUFFIXES = {".pyc", ".pyo"}
 ARCHIVE_SUFFIXES = {".skill", ".zip", ".whl", ".tar", ".gz", ".tgz"}
 SECRET_PATTERNS = [

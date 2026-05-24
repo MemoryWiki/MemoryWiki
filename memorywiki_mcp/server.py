@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ipaddress import ip_address
 import os
+from ipaddress import ip_address
 
 from memorywiki_mcp.schema import (
     CrystallizeInput,
@@ -12,6 +12,8 @@ from memorywiki_mcp.schema import (
     IndexMaintainOutput,
     IngestSourceInput,
     IngestSourceOutput,
+    ListInput,
+    ListOutput,
     ReadMemoryInput,
     ReadMemoryOutput,
     RecallInput,
@@ -23,6 +25,7 @@ from memorywiki_mcp.tools import memorywiki_crystallize as run_crystallize
 from memorywiki_mcp.tools import memorywiki_forget as run_forget
 from memorywiki_mcp.tools import memorywiki_ingest_source as run_ingest_source
 from memorywiki_mcp.tools import memorywiki_index_maintain as run_index_maintain
+from memorywiki_mcp.tools import memorywiki_list as run_list
 from memorywiki_mcp.tools import memorywiki_read_memory as run_read_memory
 from memorywiki_mcp.tools import memorywiki_recall as run_recall
 from memorywiki_mcp.tools import memorywiki_write_session as run_write_session
@@ -30,6 +33,7 @@ from memorywiki_mcp.tools import memorywiki_write_session as run_write_session
 
 TOOL_NAMES = (
     "memorywiki_recall",
+    "memorywiki_list",
     "memorywiki_read_memory",
     "memorywiki_index_maintain",
     "memorywiki_write_session",
@@ -46,6 +50,11 @@ def tool_specs() -> dict[str, dict]:
             "read_only": True,
             "write_gated": "refresh_index_if_needed",
             "description": "Hybrid recall over project/global MemoryWiki memory.",
+        },
+        "memorywiki_list": {
+            "read_only": True,
+            "write_gated": False,
+            "description": "List MemoryWiki memories by scope, kind, or concept.",
         },
         "memorywiki_read_memory": {
             "read_only": True,
@@ -102,6 +111,11 @@ def create_server():
     def memorywiki_recall(input: RecallInput) -> RecallOutput:
         """Hybrid recall over local MemoryWiki memory with warnings and provenance."""
         return run_recall(input)
+
+    @mcp.tool()
+    def memorywiki_list(input: ListInput) -> ListOutput:
+        """List MemoryWiki memories by scope, kind, or concept."""
+        return run_list(input)
 
     @mcp.tool()
     def memorywiki_read_memory(input: ReadMemoryInput) -> ReadMemoryOutput:

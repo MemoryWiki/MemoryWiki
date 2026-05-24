@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
 
-import json
-
 from memory_system.models import SemanticMemory, SourceRef
 from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
-from memorywiki_mcp.schema import IndexMaintainInput, ReadMemoryInput, RecallInput
-from memorywiki_mcp.tools import memorywiki_index_maintain, memorywiki_read_memory, memorywiki_recall
+from memorywiki_mcp.schema import IndexMaintainInput, ListInput, ReadMemoryInput, RecallInput
+from memorywiki_mcp.tools import (
+    memorywiki_index_maintain,
+    memorywiki_list,
+    memorywiki_read_memory,
+    memorywiki_recall,
+)
 
 
 def _store(root: Path, scope: str = "project") -> ScopedMemoryStore:
@@ -106,6 +110,25 @@ def test_memorywiki_recall_neutralizes_query_echo(tmp_path, monkeypatch):
     )
 
     assert output.query == "[REDACTED_INSTRUCTION_LIKE_MEMORY]"
+
+
+def test_memorywiki_list_returns_memory_inventory(tmp_path, monkeypatch):
+    project_root = tmp_path / "project"
+    _write_semantic(project_root, "project", "mcp-list", "MCP list returns memory inventory.")
+    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
+
+    output = memorywiki_list(
+        ListInput(
+            scope="project",
+            kind="semantic",
+            concepts=["mcp"],
+            project_root=str(project_root),
+        )
+    )
+
+    assert output.count == 1
+    assert output.memories[0].identifier == "mcp-list"
+    assert output.memories[0].concepts == ["mcp", "retrieval"]
 
 
 def test_memorywiki_read_memory_returns_sanitized_semantic_memory(tmp_path, monkeypatch):

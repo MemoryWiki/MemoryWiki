@@ -39,7 +39,7 @@ Problem-first story:
 - One cross-project recall demo: `docs/demo-cross-project-recall.md`.
 - FAQ: local-only mode, no API key required, MCP gates, privacy model,
   limitations, comparison to hosted memory tools.
-- Launch copy pack: `docs/launch/launch-copy.md`.
+- Launch copy pack: `docs/internal/launch/launch-copy.md`.
 
 ## Feedback Operations
 

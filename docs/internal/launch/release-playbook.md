@@ -96,4 +96,4 @@ First public release candidate for local-first agent memory.
 ```
 
 The prepared long-form draft lives at
-`docs/launch/v0.1.0-release-notes.md`.
+`docs/internal/launch/v0.1.0-release-notes.md`.

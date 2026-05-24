@@ -4,9 +4,10 @@ All notable public changes to MemoryWiki will be documented here.
 
 The project uses semantic versioning after the first public release.
 
-## 0.1.0 - Unreleased
+## 0.1.0 - Draft
 
-Initial public release candidate.
+Initial public release draft. The repository is public, but tagged release
+artifacts are prepared only after the release checklist is green.
 
 Highlights:
 
