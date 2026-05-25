@@ -1,10 +1,11 @@
+"""Validated path helpers for a single MemoryWiki scope root."""
+
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
-import re
 from typing import Union
-
 
 EPISODIC_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 SESSION_ID_RE = re.compile(r"session-[A-Za-z0-9][A-Za-z0-9_.-]*")
@@ -116,23 +117,23 @@ class MemoryScopePaths:
 
     def episodic_for_date(self, date_text: str) -> Path:
         validate_episodic_date(date_text)
-        return self.root / ("%s.md" % date_text)
+        return self.root / (f"{date_text}.md")
 
     def episode_for_date(self, date_text: str) -> Path:
         validate_episodic_date(date_text)
-        return self.episodes_dir / ("%s.md" % date_text)
+        return self.episodes_dir / (f"{date_text}.md")
 
     def session_file(self, session_id: str) -> Path:
         validate_session_id(session_id)
-        return self.sessions_dir / ("%s.md" % session_id)
+        return self.sessions_dir / (f"{session_id}.md")
 
     def semantic_file(self, memory_id: str) -> Path:
         validate_memory_item_id(memory_id)
-        return self.semantic_dir / ("%s.md" % memory_id)
+        return self.semantic_dir / (f"{memory_id}.md")
 
     def procedure_file(self, memory_id: str) -> Path:
         validate_memory_item_id(memory_id)
-        return self.procedures_dir / ("%s.md" % memory_id)
+        return self.procedures_dir / (f"{memory_id}.md")
 
     def ensure_root(self) -> None:
         self.root.mkdir(parents=True, exist_ok=True)

@@ -1,11 +1,12 @@
+"""Safety gates and path/input screening for MemoryWiki MCP tools."""
+
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any, Optional, Tuple
-import os
 
 from memory_system.sanitizer import neutralize_instruction_text, sanitize_text
-
 
 PATH_FIELD_HINTS = ("path", "root", "source")
 TRUE_VALUES = {"1", "true", "yes", "on"}
@@ -34,7 +35,7 @@ def _same_path(left: Path, right: Path) -> bool:
 def _validate_path_text(field: str, value: str) -> None:
     path = Path(value)
     if "\x00" in value or ".." in path.parts:
-        raise ValueError("Path-like field is not allowed to escape its root: %s" % field)
+        raise ValueError(f"Path-like field is not allowed to escape its root: {field}")
 
 
 def screen_tool_input(tool_name: str, payload: dict[str, Any]) -> None:
@@ -50,12 +51,12 @@ def screen_tool_input(tool_name: str, payload: dict[str, Any]) -> None:
                 if isinstance(item, dict):
                     screen_tool_input(tool_name, item)
                 elif isinstance(item, str) and len(item) > MAX_OUTPUT_CHARS:
-                    raise ValueError("String input is too large for %s: %s" % (tool_name, key))
+                    raise ValueError(f"String input is too large for {tool_name}: {key}")
             continue
         if not isinstance(value, str):
             continue
         if len(value) > MAX_OUTPUT_CHARS:
-            raise ValueError("String input is too large for %s: %s" % (tool_name, key))
+            raise ValueError(f"String input is too large for {tool_name}: {key}")
         lowered = key.lower()
         if any(hint in lowered for hint in PATH_FIELD_HINTS):
             _validate_path_text(key, value)

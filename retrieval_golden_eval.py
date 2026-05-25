@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import json
-from pathlib import Path
 import sys
+from dataclasses import dataclass
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -174,7 +174,7 @@ def load_cases(
     for key in sorted(selected_keys):
         project_cases = projects.get(key, [])
         if not isinstance(project_cases, list):
-            raise ValueError("Project case registry entry must be a list: %s" % key)
+            raise ValueError(f"Project case registry entry must be a list: {key}")
         for item in project_cases:
             case = _case_from_dict(item)
             if case.name in seen_names:
@@ -252,10 +252,7 @@ def _evaluate_case(
     if not expected:
         failure_reason = "case has no expected target"
     elif found and not rank_ok:
-        failure_reason = "matched at rank %s exceeds min_rank %s" % (
-            matched_rank,
-            case.min_rank,
-        )
+        failure_reason = f"matched at rank {matched_rank} exceeds min_rank {case.min_rank}"
     elif matched:
         failure_reason = ""
     elif not result.hits:
@@ -263,7 +260,7 @@ def _evaluate_case(
     elif expected_scope or expected_source:
         failure_reason = "expected target not found with required scope/source"
     else:
-        failure_reason = "expected target not found in top %s hits" % len(result.hits)
+        failure_reason = f"expected target not found in top {len(result.hits)} hits"
     return {
         "name": case.name,
         "query": case.query,
@@ -368,27 +365,26 @@ def render_human(payload: dict[str, Any]) -> str:
     lines = [
         "# MemoryWiki Retrieval Golden Eval",
         "",
-        "Status: %s" % payload["status"],
-        "Pass rate: %.0f%% (%s/%s)" % (
+        "Status: {}".format(payload["status"]),
+        "Pass rate: {:.0f}% ({}/{})".format(
             payload["pass_rate"] * 100,
             payload["passed"],
             payload["total"],
         ),
-        "Required: %.0f%% (%s/%s)" % (
+        "Required: {:.0f}% ({}/{})".format(
             payload.get("required_pass_rate", 1.0) * 100,
             payload.get("required_passed", 0),
             payload.get("required_total", 0),
         ),
-        "MRR: %.3f" % payload.get("mean_reciprocal_rank", 0.0),
+        "MRR: {:.3f}".format(payload.get("mean_reciprocal_rank", 0.0)),
         "",
     ]
     for case in payload["cases"]:
         marker = "PASS" if case["passed"] else "FAIL"
         rank = case.get("rank")
-        rank_text = "rank %s" % rank if rank else case.get("failure_reason", "no match")
+        rank_text = f"rank {rank}" if rank else case.get("failure_reason", "no match")
         lines.append(
-            "- [%s] %s%s -> %s (%s)"
-            % (
+            "- [{}] {}{} -> {} ({})".format(
                 marker,
                 case["name"],
                 "" if case.get("required", True) else " optional",
@@ -397,7 +393,7 @@ def render_human(payload: dict[str, Any]) -> str:
             )
         )
         if case["warnings"]:
-            lines.append("  warnings: %s" % "; ".join(case["warnings"][:3]))
+            lines.append("  warnings: {}".format("; ".join(case["warnings"][:3])))
     return "\n".join(lines) + "\n"
 
 

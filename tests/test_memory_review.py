@@ -9,21 +9,19 @@ import pytest
 
 from memory_crystallize_candidates import propose_candidates
 from memory_feedback import append_feedback
-from memory_system.models import SemanticMemory, SessionFile
-from memory_system.paths import MemoryScopePaths
-from memory_system.store import ScopedMemoryStore
-
 from memory_review import (
     apply_candidate,
     fill_golden_candidate_expected,
     promote_golden_candidate,
-    render_human,
     reject_golden_candidate,
+    render_human,
     run_review,
     summarize_golden_candidate_backlog,
     write_golden_candidates_to_pending,
 )
-
+from memory_system.models import SemanticMemory, SessionFile
+from memory_system.paths import MemoryScopePaths
+from memory_system.store import ScopedMemoryStore
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

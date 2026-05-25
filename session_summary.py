@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import asdict
 from datetime import datetime
-import sys
 
 from memory_system.config import MemoryConfig
 from memory_system.models import SessionFile, SessionMeta, SessionSummary
@@ -20,7 +20,7 @@ def _split_csv(value: str | None) -> list[str]:
 
 
 def _default_session_id() -> str:
-    return "session-%s" % datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
+    return "session-{}".format(datetime.now().astimezone().strftime("%Y%m%d-%H%M%S"))
 
 
 def _merge_items(*values: list[str] | None) -> list[str]:
@@ -61,8 +61,7 @@ def _reject_stdin_routing_fields(parser: argparse.ArgumentParser, payload: dict)
     present = sorted(field for field in routing_fields if field in payload)
     if present:
         parser.error(
-            "--stdin payload may not set routing fields (%s); use CLI flags instead"
-            % ", ".join(present)
+            "--stdin payload may not set routing fields ({}); use CLI flags instead".format(", ".join(present))
         )
 
 
@@ -181,7 +180,7 @@ def main() -> None:
             try:
                 stdin_payload = json.loads(sys.stdin.read() or "{}")
             except json.JSONDecodeError as exc:
-                parser.error("--stdin must contain a JSON object: %s" % exc)
+                parser.error(f"--stdin must contain a JSON object: {exc}")
             if not isinstance(stdin_payload, dict):
                 parser.error("--stdin must contain a JSON object")
             _reject_stdin_routing_fields(parser, stdin_payload)
@@ -251,7 +250,7 @@ def main() -> None:
         if args.format == "json":
             print(json.dumps(_safe_output_json(asdict(session)), ensure_ascii=False, indent=2))
         else:
-            print("Saved session summary: %s" % _safe_output_text(session.session_id))
+            print(f"Saved session summary: {_safe_output_text(session.session_id)}")
             print(_safe_output_text(session.summary))
         return
 
@@ -274,10 +273,10 @@ def main() -> None:
         print("No session summaries found.")
         return
     for index, session in enumerate(sessions, start=1):
-        print("[%s] %s %s" % (index, _safe_output_text(session.session_id), _safe_output_text(session.ts[:19])))
-        print("    %s" % _safe_output_text(session.summary))
+        print(f"[{index}] {_safe_output_text(session.session_id)} {_safe_output_text(session.ts[:19])}")
+        print(f"    {_safe_output_text(session.summary)}")
         if session.pending_tasks:
-            print("    Pending: %s" % ", ".join(_safe_output_text(item) for item in session.pending_tasks))
+            print("    Pending: {}".format(", ".join(_safe_output_text(item) for item in session.pending_tasks)))
 
 
 if __name__ == "__main__":

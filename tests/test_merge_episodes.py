@@ -7,7 +7,6 @@ from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
 from merge_episodes import merge_episodes
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -17,7 +16,7 @@ def test_merge_episodes_imports_flat_cowork_daily_files_to_v2(tmp_path):
     src.mkdir(parents=True)
     fake_key = "sk-proj-" + "abc1234567890abcdef1234567890abcdef"
     (src / "2026-05-08.md").write_text(
-        "## 09:00 Cowork note\n\n- Imported fact %s\n" % fake_key,
+        f"## 09:00 Cowork note\n\n- Imported fact {fake_key}\n",
         encoding="utf-8",
     )
 

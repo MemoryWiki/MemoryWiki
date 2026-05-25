@@ -4,10 +4,10 @@ All notable public changes to MemoryWiki will be documented here.
 
 The project uses semantic versioning after the first public release.
 
-## 0.1.0 - Draft
+## 0.1.0 - 2026-05-25
 
-Initial public release draft. The repository is public, but tagged release
-artifacts are prepared only after the release checklist is green.
+Initial public release candidate. Tagged release artifacts are prepared only
+after the release checklist is green.
 
 Highlights:
 
@@ -23,9 +23,8 @@ Highlights:
 - Launch-ready README, roadmap, issue templates, release notes draft, and demo
   assets.
 
-Before release:
+Release checklist:
 
-- Switch the repository from private to public after final approval.
 - Recheck branch protection, secret scanning, push protection, and private
   vulnerability reporting after public/account-plan support is available.
 - Generate the release manifest and build artifacts from a clean commit.

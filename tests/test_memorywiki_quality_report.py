@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import json
 import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from memory_feedback import append_feedback
@@ -13,7 +13,6 @@ from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
 from memorywiki_quality_report import run_quality_report
 from retrieval_golden_eval import RetrievalCase
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

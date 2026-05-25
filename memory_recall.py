@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import argparse
-from collections import Counter
-from dataclasses import asdict
 import json
 import math
-from pathlib import Path
 import re
 import sys
+from collections import Counter
+from dataclasses import asdict
+from pathlib import Path
 from typing import Iterable
 
+from memory_index_maintain import rebuild_scope_index
 from memory_system.models import RecallHit, RecallResult, SourceRef
 from memory_system.paths import MemoryScopePaths
 from memory_system.retrieval_index import (
@@ -22,8 +23,6 @@ from memory_system.retrieval_index import (
 )
 from memory_system.sanitizer import neutralize_instruction_text, sanitize_text
 from memory_system.store import ScopedMemoryStore
-from memory_index_maintain import rebuild_scope_index
-
 
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}|\d{8}")
 DEFAULT_TOKEN_BUDGET = 1200
@@ -200,7 +199,7 @@ def safe_store(root: Path, scope: str) -> ScopedMemoryStore | None:
     if not root.exists():
         return None
     if root.is_symlink() or not root.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % root)
+        raise ValueError(f"Memory root must be a real directory: {root}")
     return ScopedMemoryStore(
         MemoryScopePaths.from_root(root, scope=scope),
         sanitize_on_write=True,
@@ -312,11 +311,11 @@ def candidates_for_store(
         explanation.update(_conflict_fields(item.update_log))
         score = explanation["base_score"]
         provenance = item.source_refs + [
-            memory_file_ref("memory-file", "semantic/%s.md" % item.id, item.id)
+            memory_file_ref("memory-file", f"semantic/{item.id}.md", item.id)
         ]
         if explanation["conflict_history"]:
             provenance.append(
-                memory_file_ref("update-log", "semantic/%s.md" % item.id, item.id)
+                memory_file_ref("update-log", f"semantic/{item.id}.md", item.id)
             )
         hit = RecallHit(
             scope=scope,
@@ -355,7 +354,7 @@ def candidates_for_store(
         if score <= 0:
             continue
         provenance = item.source_refs + [
-            memory_file_ref("memory-file", "procedures/%s.md" % item.id, item.id)
+            memory_file_ref("memory-file", f"procedures/{item.id}.md", item.id)
         ]
         yield RecallHit(
             scope=scope,
@@ -393,7 +392,7 @@ def candidates_for_store(
             excerpt=center_excerpt(text, query_tokens),
             score=score,
             provenance=[
-                memory_file_ref("session", "sessions/%s.md" % session.id, session.id)
+                memory_file_ref("session", f"sessions/{session.id}.md", session.id)
             ],
             tokens=estimate_tokens(text),
             score_explanation={**explanation, "strategy": "live"},
@@ -416,7 +415,7 @@ def candidates_for_store(
             title=date_text,
             excerpt=center_excerpt(episode.body, query_tokens),
             score=score,
-            provenance=[memory_file_ref("episode", "episodes/%s.md" % date_text, date_text)],
+            provenance=[memory_file_ref("episode", f"episodes/{date_text}.md", date_text)],
             tokens=estimate_tokens(episode.body),
             score_explanation={**explanation, "strategy": "live"},
         )
@@ -672,9 +671,8 @@ def _conflict_warnings(hits: list[RecallHit]) -> list[str]:
             continue
         seen.add(key)
         warnings.append(
-            "Conflict history present for %s/%s/%s; review semantic update_log "
+            f"Conflict history present for {hit.scope}/{hit.source}/{hit.identifier}; review semantic update_log "
             "before treating it as settled fact."
-            % (hit.scope, hit.source, hit.identifier)
         )
     return warnings
 
@@ -697,8 +695,7 @@ def recall(args) -> RecallResult:
             refresh_report = rebuild_scope_index(root, scope)
             if refresh_report.get("rebuilt"):
                 warnings.append(
-                    "Refreshed retrieval index for %s memory: %s"
-                    % (scope, refresh_report.get("index_path", ""))
+                    "Refreshed retrieval index for {} memory: {}".format(scope, refresh_report.get("index_path", ""))
                 )
         if args.strategy == "live":
             hits.extend(candidates_for_store(store, scope, args.query, args.embedding, graph))
@@ -714,8 +711,8 @@ def recall(args) -> RecallResult:
             hits.extend(indexed_hits)
         else:
             warnings.append(
-                "Hybrid fallback to live recall for %s memory because the retrieval "
-                "index is stale or missing." % scope
+                f"Hybrid fallback to live recall for {scope} memory because the retrieval "
+                "index is stale or missing."
             )
             hits.extend(candidates_for_store(store, scope, args.query, args.embedding, graph))
 
@@ -771,48 +768,36 @@ def _json_dumps_cli(payload: dict) -> str:
 
 def render_human(result: RecallResult, explain_score: bool = False) -> str:
     if not result.hits:
-        return "No matching memory found for: %s\n" % _safe_output_text(result.query)
+        return f"No matching memory found for: {_safe_output_text(result.query)}\n"
     lines = [
         "# Memory Recall",
         "",
-        "Query: %s" % _safe_output_text(result.query),
-        "Strategy: %s" % _safe_output_text(result.strategy),
-        "Tokens used: %s" % result.tokens_used,
+        f"Query: {_safe_output_text(result.query)}",
+        f"Strategy: {_safe_output_text(result.strategy)}",
+        f"Tokens used: {result.tokens_used}",
         "Truncated: %s" % ("yes" if result.truncated else "no"),
         "",
     ]
     if result.warnings:
         lines.append("Warnings:")
-        lines.extend("- %s" % _safe_output_text(warning) for warning in result.warnings)
+        lines.extend(f"- {_safe_output_text(warning)}" for warning in result.warnings)
         lines.append("")
     for index, hit in enumerate(result.hits, start=1):
         lines.extend(
             [
-                "%s. [%s/%s] %s (%s, score %.2f)"
-                % (
-                    index,
-                    _safe_output_text(hit.scope),
-                    _safe_output_text(hit.source),
-                    _safe_output_text(hit.title),
-                    _safe_output_text(hit.identifier),
-                    hit.score,
-                ),
+                f"{index}. [{_safe_output_text(hit.scope)}/{_safe_output_text(hit.source)}] {_safe_output_text(hit.title)} ({_safe_output_text(hit.identifier)}, score {hit.score:.2f})",
                 _safe_output_text(hit.excerpt),
             ]
         )
         if hit.provenance:
             refs = ", ".join(
-                "%s:%s"
-                % (
-                    _safe_output_text(ref.kind),
-                    _safe_output_text(ref.identifier or ref.path),
-                )
+                f"{_safe_output_text(ref.kind)}:{_safe_output_text(ref.identifier or ref.path)}"
                 for ref in hit.provenance[:3]
             )
-            lines.append("Sources: %s" % refs)
+            lines.append(f"Sources: {refs}")
         if explain_score and hit.score_explanation:
             explanation = _safe_output_json(_round_score_explanation(hit.score_explanation))
-            lines.append("Score explanation: %s" % json.dumps(explanation, ensure_ascii=False))
+            lines.append(f"Score explanation: {json.dumps(explanation, ensure_ascii=False)}")
         lines.append("")
     return "\n".join(lines)
 
@@ -900,13 +885,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.limit <= 0:
         parser.error("--limit must be positive")
     if args.limit > MAX_RECALL_LIMIT:
-        parser.error("--limit must be at most %s" % MAX_RECALL_LIMIT)
+        parser.error(f"--limit must be at most {MAX_RECALL_LIMIT}")
     if args.token_budget <= 0:
         parser.error("--token-budget must be positive")
     if args.token_budget > MAX_TOKEN_BUDGET:
-        parser.error("--token-budget must be at most %s" % MAX_TOKEN_BUDGET)
+        parser.error(f"--token-budget must be at most {MAX_TOKEN_BUDGET}")
     if len(args.query) > MAX_QUERY_CHARS:
-        parser.error("--query must be at most %s characters" % MAX_QUERY_CHARS)
+        parser.error(f"--query must be at most {MAX_QUERY_CHARS} characters")
     try:
         result = recall(args)
     except ValueError as exc:

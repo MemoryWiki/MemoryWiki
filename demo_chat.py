@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from memory_system.config import MemoryConfig
 from memory_system.manager import MemoryManager
 from memory_system.paths import validate_episodic_date
-from pathlib import Path
 
 
 def parse_command(text):
@@ -36,7 +37,7 @@ def handle_command(manager, command, value):
         if not sessions:
             return "No session summaries found."
         return "\n".join(
-            "[%s] %s - %s" % (session.ts[:19], session.session_id, session.summary)
+            f"[{session.ts[:19]}] {session.session_id} - {session.summary}"
             for session in sessions
         )
     if command == "day":
@@ -46,11 +47,7 @@ def handle_command(manager, command, value):
             return str(exc)
         return manager.overlay_store.project_store.read_episodic(value)
     if command == "scope":
-        return "backend=%s global=%s project=%s" % (
-            manager.config.backend,
-            manager.overlay_store.global_store.paths.root,
-            manager.overlay_store.project_store.paths.root,
-        )
+        return f"backend={manager.config.backend} global={manager.overlay_store.global_store.paths.root} project={manager.overlay_store.project_store.paths.root}"
     if command == "promote":
         parts = value.split()
         if len(parts) != 2 or parts[1] != "confirm" or parts[0] not in ("user", "memory"):
@@ -100,15 +97,14 @@ def main():
                 result = command_result
                 for hit in result.hits[:10]:
                     print(
-                        "[%s/%s] %s: %s"
-                        % (hit.scope, hit.source, hit.identifier, hit.excerpt)
+                        f"[{hit.scope}/{hit.source}] {hit.identifier}: {hit.excerpt}"
                     )
             else:
                 print(command_result)
             continue
 
         reply = manager.run_turn(user_text)
-        print("assistant> %s" % reply)
+        print(f"assistant> {reply}")
 
 
 if __name__ == "__main__":

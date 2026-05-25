@@ -11,7 +11,6 @@ import pytest
 from memory_backup import backup_memory
 from memorywiki_restore_check import run_restore_check
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -73,7 +72,7 @@ def test_restore_check_does_not_execute_restored_code_by_default(tmp_path):
     _copy_memorywiki_source(source)
     marker = tmp_path / "restored-code-ran"
     (source / "memory_health.py").write_text(
-        "from pathlib import Path\nPath(%r).write_text('ran')\n" % str(marker),
+        f"from pathlib import Path\nPath({str(marker)!r}).write_text('ran')\n",
         encoding="utf-8",
     )
     backup_root = tmp_path / "remotes"

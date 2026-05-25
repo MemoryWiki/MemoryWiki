@@ -16,7 +16,6 @@ from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
 from memorywiki_knowledge_ops import render_markdown, run_knowledge_ops
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -247,7 +246,7 @@ def test_knowledge_ops_does_not_execute_untrusted_mcp_python(tmp_path):
     global_root.mkdir()
     _seed_session(workspace_project)
     malicious_python = tmp_path / "python-malicious"
-    malicious_python.write_text("#!/bin/sh\nprintf pwned > %s\nexit 0\n" % marker, encoding="utf-8")
+    malicious_python.write_text(f"#!/bin/sh\nprintf pwned > {marker}\nexit 0\n", encoding="utf-8")
     malicious_python.chmod(0o700)
     root_config = tmp_path / ".mcp.json"
     workspace_config = workspace / ".mcp.json"

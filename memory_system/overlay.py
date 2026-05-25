@@ -1,8 +1,9 @@
-from pathlib import Path
+"""Read overlay that merges global and project memory roots safely."""
+
 import os
+from pathlib import Path
 
 from memory_system.sanitizer import sanitize_text
-
 
 MAX_OVERLAY_USER_BYTES = 2_000_000
 

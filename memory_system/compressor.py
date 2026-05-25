@@ -1,3 +1,5 @@
+"""Prompt-driven memory compression adapter used by local and model backends."""
+
 from __future__ import annotations
 
 from memory_system.models import CompactionResult

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
+from memory_system.config import default_memory_timezone
 from memorywiki_mcp.client_config import build_mcp_json, build_server_config
 
 
@@ -21,7 +22,7 @@ def test_client_config_defaults_to_read_only_stdio(tmp_path):
     assert config["cwd"] == str(repo_root)
     assert config["env"]["PYTHONPATH"] == str(repo_root)
     assert config["env"]["MEMORY_BACKEND"] == "local"
-    assert config["env"]["MEMORY_TIMEZONE"] == "Asia/Shanghai"
+    assert config["env"]["MEMORY_TIMEZONE"] == default_memory_timezone()
     assert "MEMORY_MCP_WRITE_ENABLED" not in config["env"]
     assert "MEMORY_GLOBAL_WRITE_ENABLED" not in config["env"]
     assert "MEMORY_MCP_ALLOW_ROOT_OVERRIDE" not in config["env"]

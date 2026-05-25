@@ -10,7 +10,6 @@ from memory_system.paths import MemoryScopePaths
 from memory_system.sanitizer import neutralize_instruction_text, sanitize_text
 from memory_system.store import ScopedMemoryStore
 
-
 MemoryKind = Literal["all", "semantic", "procedural", "procedure", "session", "episode"]
 
 
@@ -36,7 +35,7 @@ def _store_if_exists(root: str | Path, scope: str) -> ScopedMemoryStore | None:
     if not path.exists():
         return None
     if path.is_symlink() or not path.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % path)
+        raise ValueError(f"Memory root must be a real directory: {path}")
     return ScopedMemoryStore(
         MemoryScopePaths.from_root(path, scope=scope),
         sanitize_on_write=True,
@@ -187,8 +186,7 @@ def render_table(entries: list[MemoryListEntry]) -> str:
     lines = ["scope\tkind\tid\ttitle\tupdated\tconcepts"]
     for row in rows:
         lines.append(
-            "%s\t%s\t%s\t%s\t%s\t%s"
-            % (
+            "{}\t{}\t{}\t{}\t{}\t{}".format(
                 row["scope"],
                 row["kind"],
                 row["identifier"],

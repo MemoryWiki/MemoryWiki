@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
-from datetime import datetime
 import json
 import os
-from pathlib import Path
 import sys
+from dataclasses import asdict
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from memory_system.sanitizer import sanitize_text
-
 
 LEDGER_NAME = "retrieval_feedback.jsonl"
 MAX_FIELD_CHARS = 5000
@@ -24,15 +23,15 @@ def _now() -> str:
 def _safe_root(root: str | Path) -> Path:
     path = Path(root).expanduser()
     if path.exists() and (path.is_symlink() or not path.is_dir()):
-        raise ValueError("Feedback root must be a real directory: %s" % path)
+        raise ValueError(f"Feedback root must be a real directory: {path}")
     cursor = path
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.exists() and cursor.is_symlink():
-        raise ValueError("Feedback root may not be below a symlink: %s" % cursor)
+        raise ValueError(f"Feedback root may not be below a symlink: {cursor}")
     for parent in cursor.parents:
         if parent.is_symlink():
-            raise ValueError("Feedback root may not be below a symlink: %s" % parent)
+            raise ValueError(f"Feedback root may not be below a symlink: {parent}")
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -44,7 +43,7 @@ def _clean(value: Any) -> str:
 def _append_jsonl(root: Path, row: dict[str, Any]) -> Path:
     path = root / LEDGER_NAME
     if path.exists() and path.is_symlink():
-        raise ValueError("Feedback ledger may not be a symlink: %s" % path)
+        raise ValueError(f"Feedback ledger may not be a symlink: {path}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -68,7 +67,7 @@ def append_feedback(
     now: str | None = None,
 ) -> dict[str, Any]:
     if rating not in VALID_RATINGS:
-        raise ValueError("rating must be one of: %s" % ", ".join(VALID_RATINGS))
+        raise ValueError("rating must be one of: {}".format(", ".join(VALID_RATINGS)))
     root_path = _safe_root(root)
     row = {
         "ts": now or _now(),

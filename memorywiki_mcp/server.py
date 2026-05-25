@@ -1,3 +1,5 @@
+"""MemoryWiki MCP server registration and transport safety checks."""
+
 from __future__ import annotations
 
 import os
@@ -23,13 +25,12 @@ from memorywiki_mcp.schema import (
 )
 from memorywiki_mcp.tools import memorywiki_crystallize as run_crystallize
 from memorywiki_mcp.tools import memorywiki_forget as run_forget
-from memorywiki_mcp.tools import memorywiki_ingest_source as run_ingest_source
 from memorywiki_mcp.tools import memorywiki_index_maintain as run_index_maintain
+from memorywiki_mcp.tools import memorywiki_ingest_source as run_ingest_source
 from memorywiki_mcp.tools import memorywiki_list as run_list
 from memorywiki_mcp.tools import memorywiki_read_memory as run_read_memory
 from memorywiki_mcp.tools import memorywiki_recall as run_recall
 from memorywiki_mcp.tools import memorywiki_write_session as run_write_session
-
 
 TOOL_NAMES = (
     "memorywiki_recall",
@@ -176,8 +177,8 @@ def run_server(
     if transport == "streamable-http":
         if not _is_loopback_host(host) and not _allow_non_loopback_http():
             raise ValueError(
-                "streamable-http refuses non-loopback host %s; use stdio or set "
-                "MEMORY_MCP_ALLOW_HTTP_NON_LOOPBACK=true explicitly" % host
+                f"streamable-http refuses non-loopback host {host}; use stdio or set "
+                "MEMORY_MCP_ALLOW_HTTP_NON_LOOPBACK=true explicitly"
             )
         os.environ.setdefault("FASTMCP_HOST", host)
         os.environ.setdefault("FASTMCP_PORT", str(port))

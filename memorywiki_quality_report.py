@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from collections import Counter
 from datetime import datetime, timedelta, timezone
-import json
 from pathlib import Path
-import sys
 from typing import Any
 
 from memory_health import run_health
@@ -20,7 +20,6 @@ from memory_system.models import ProceduralMemory, SemanticMemory
 from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
 from retrieval_golden_eval import RetrievalCase, load_cases, run_golden_eval
-
 
 DEFAULT_REVIEW_DUE_DAYS = 180
 
@@ -74,7 +73,7 @@ def _safe_existing_store(root: Path, scope: str) -> ScopedMemoryStore | None:
     if not root.exists():
         return None
     if root.is_symlink() or not root.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % root)
+        raise ValueError(f"Memory root must be a real directory: {root}")
     return ScopedMemoryStore(
         MemoryScopePaths.from_root(root, scope),
         sanitize_on_write=True,
@@ -84,8 +83,8 @@ def _safe_existing_store(root: Path, scope: str) -> ScopedMemoryStore | None:
 
 def _item_target(item: SemanticMemory | ProceduralMemory) -> str:
     if isinstance(item, SemanticMemory):
-        return "semantic/%s.md" % item.id
-    return "procedures/%s.md" % item.id
+        return f"semantic/{item.id}.md"
+    return f"procedures/{item.id}.md"
 
 
 def _freshness_row(
@@ -208,7 +207,7 @@ def summarize_feedback(
     ):
         root = root.expanduser()
         if root.exists() and (root.is_symlink() or not root.is_dir()):
-            raise ValueError("Memory root must be a real directory: %s" % root)
+            raise ValueError(f"Memory root must be a real directory: {root}")
         rows.extend(load_feedback_rows(root, selected_scope))
     events = Counter(str(row.get("event", "")) for row in rows)
     ratings = Counter(
@@ -388,28 +387,27 @@ def render_human(payload: dict[str, Any]) -> str:
     lines = [
         "# MemoryWiki Quality Report",
         "",
-        "Status: %s" % payload["status"],
+        "Status: {}".format(payload["status"]),
         "Read-only: %s" % ("yes" if payload["read_only"] else "no"),
-        "Scope: %s" % payload["scope"],
+        "Scope: {}".format(payload["scope"]),
         "Index rebuild needed: %s"
         % ("yes" if payload["index"]["rebuild_needed"] else "no"),
-        "Health issues: %s" % payload["health"]["issue_count"],
-        "Review inbox: %s" % payload["review"]["review_inbox_count"],
-        "Review-due memories: %s" % payload["freshness"]["review_due_count"],
-        "Lifecycle proposals: %s" % payload["lifecycle"]["proposal_count"],
-        "Feedback rows: %s" % payload["feedback"]["row_count"],
-        "Golden candidates: %s ready / %s total"
-        % (
+        "Health issues: {}".format(payload["health"]["issue_count"]),
+        "Review inbox: {}".format(payload["review"]["review_inbox_count"]),
+        "Review-due memories: {}".format(payload["freshness"]["review_due_count"]),
+        "Lifecycle proposals: {}".format(payload["lifecycle"]["proposal_count"]),
+        "Feedback rows: {}".format(payload["feedback"]["row_count"]),
+        "Golden candidates: {} ready / {} total".format(
             payload["golden_candidates"]["ready_count"],
             payload["golden_candidates"]["candidate_count"],
         ),
-        "Golden eval: %s" % payload["golden_eval"]["status"],
+        "Golden eval: {}".format(payload["golden_eval"]["status"]),
         "",
     ]
     if payload["warnings"]:
         lines.append("## Warnings")
         for warning in payload["warnings"][:10]:
-            lines.append("- %s" % warning)
+            lines.append(f"- {warning}")
         lines.append("")
     if payload["review"]["review_inbox"]:
         lines.append("## Review Inbox")

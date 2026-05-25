@@ -1,10 +1,11 @@
-from memory_system.config import MemoryConfig
+from memory_system.config import MemoryConfig, default_memory_timezone
 from memory_system.paths import MemoryScopePaths
 
 
 def test_default_config_uses_local_backend_and_scoped_roots(tmp_path, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("MEMORY_TIMEZONE", raising=False)
     monkeypatch.chdir(tmp_path)
     cfg = MemoryConfig.from_env()
     assert cfg.backend == "local"
@@ -19,7 +20,7 @@ def test_default_config_uses_local_backend_and_scoped_roots(tmp_path, monkeypatc
     assert cfg.recent_window == 20
     assert cfg.core_memory_char_limit == 3000
     assert cfg.user_memory_char_limit == 1500
-    assert cfg.timezone == "Asia/Shanghai"
+    assert cfg.timezone == default_memory_timezone()
     assert cfg.canonical_user_memory_path.name == "USER.md"
 
 
@@ -35,6 +36,46 @@ def test_from_env_reads_project_root_env(tmp_path, monkeypatch):
     cfg = MemoryConfig.from_env()
 
     assert cfg.project_storage_root == tmp_path / "project-env"
+
+
+def test_from_env_discovers_git_project_root_from_subdirectory(tmp_path, monkeypatch):
+    project = tmp_path / "repo"
+    nested = project / "src" / "package"
+    nested.mkdir(parents=True)
+    (project / ".git").mkdir()
+    monkeypatch.chdir(nested)
+
+    cfg = MemoryConfig.from_env()
+
+    assert cfg.project_storage_root == project / ".agent_memory" / "project"
+
+
+def test_from_env_reads_memorywiki_toml_relative_paths(tmp_path, monkeypatch):
+    monkeypatch.delenv("MEMORY_TIMEZONE", raising=False)
+    project = tmp_path / "repo"
+    project.mkdir()
+    (project / ".memorywiki.toml").write_text(
+        "\n".join(
+            [
+                "[memorywiki]",
+                'project_root = "memory/project"',
+                'global_root = "memory/global"',
+                'timezone = "UTC"',
+                'model = "gpt-test"',
+                "chat_write_enabled = true",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(project)
+
+    cfg = MemoryConfig.from_env()
+
+    assert cfg.project_storage_root == project / "memory" / "project"
+    assert cfg.global_storage_root == project / "memory" / "global"
+    assert cfg.timezone == "UTC"
+    assert cfg.model == "gpt-test"
+    assert cfg.chat_write_enabled is True
 
 
 def test_from_env_reads_canonical_user_memory_path(tmp_path, monkeypatch):
@@ -108,7 +149,7 @@ def test_from_env_rejects_out_of_range_numeric_env_values(monkeypatch):
         except ValueError as exc:
             assert name in str(exc)
         else:
-            raise AssertionError("Expected ValueError for %s" % name)
+            raise AssertionError(f"Expected ValueError for {name}")
         monkeypatch.delenv(name)
 
 

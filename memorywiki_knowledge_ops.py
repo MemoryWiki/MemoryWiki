@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import shlex
 import sys
+from pathlib import Path
 from typing import Any
 
 from memory_crystallize_candidates import propose_candidates
 from memorywiki_operator_env import resolve_mcp_python
 from memorywiki_ops_dashboard import run_ops_dashboard
-
 
 SCHEMA = "memorywiki-knowledge-ops-v1"
 
@@ -141,8 +140,7 @@ def _knowledge_loop(
             0,
             _action(
                 title="Review crystallization candidates",
-                summary="%s stable-looking session or episode snippets are candidates for human review."
-                % candidates.get("candidate_count", 0),
+                summary="{} stable-looking session or episode snippets are candidates for human review.".format(candidates.get("candidate_count", 0)),
                 command=_command(
                     "memory_crystallize_candidates.py",
                     "--root",
@@ -275,8 +273,7 @@ def _retrieval_loop(
             actions.append(
                 _action(
                     title="Review retrieval MRR gate",
-                    summary="Golden eval passes, but MRR %.3f is below the V8 daily target %.3f."
-                    % (float(mrr), min_mrr),
+                    summary=f"Golden eval passes, but MRR {float(mrr):.3f} is below the V8 daily target {min_mrr:.3f}.",
                     command=_command(
                         "retrieval_golden_eval.py",
                         "--project-root",
@@ -561,17 +558,17 @@ def render_markdown(payload: dict[str, Any]) -> str:
     lines = [
         "# MemoryWiki Knowledge Ops",
         "",
-        "- Status: `%s`" % payload["status"],
-        "- Period: `%s`" % payload["period"],
+        "- Status: `{}`".format(payload["status"]),
+        "- Period: `{}`".format(payload["period"]),
         "- Read-only: `%s`" % ("yes" if payload["read_only"] else "no"),
         "- Stage candidates: `%s`" % ("yes" if payload["stage_candidates"] else "no"),
-        "- Project root: `%s`" % payload["project_root"],
-        "- Global root: `%s`" % payload["global_root"],
-        "- MCP Python: `%s` (%s)" % (
+        "- Project root: `{}`".format(payload["project_root"]),
+        "- Global root: `{}`".format(payload["global_root"]),
+        "- MCP Python: `{}` ({})".format(
             payload.get("operator", {}).get("python", ""),
             payload.get("operator", {}).get("python_source", ""),
         ),
-        "- Adoption readiness: `%s` (%s/100)" % (
+        "- Adoption readiness: `{}` ({}/100)".format(
             payload.get("adoption", {}).get("readiness", ""),
             payload.get("adoption", {}).get("score", 0),
         ),
@@ -589,18 +586,18 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 suffix=suffix,
             ))
             if action.get("command"):
-                lines.append("  Command: `%s`" % action["command"])
+                lines.append("  Command: `{}`".format(action["command"]))
     else:
         lines.append("- No action.")
     for loop in payload["loops"]:
-        lines.extend(["", "## %s" % loop["title"]])
-        lines.append("- Status: `%s`" % loop["status"])
-        lines.append("- Summary: %s" % loop["summary"])
+        lines.extend(["", "## {}".format(loop["title"])])
+        lines.append("- Status: `{}`".format(loop["status"]))
+        lines.append("- Summary: {}".format(loop["summary"]))
         if loop.get("signals"):
             compact_signals = ", ".join(
-                "%s=%s" % (key, value) for key, value in loop["signals"].items()
+                f"{key}={value}" for key, value in loop["signals"].items()
             )
-            lines.append("- Signals: %s" % compact_signals)
+            lines.append(f"- Signals: {compact_signals}")
         actions = loop.get("actions", [])
         if not actions:
             lines.append("- No action.")
@@ -613,9 +610,9 @@ def render_markdown(payload: dict[str, Any]) -> str:
                 suffix=suffix,
             ))
             if action.get("summary"):
-                lines.append("  Summary: %s" % action["summary"])
+                lines.append("  Summary: {}".format(action["summary"]))
             if action.get("command"):
-                lines.append("  Command: `%s`" % action["command"])
+                lines.append("  Command: `{}`".format(action["command"]))
     return "\n".join(lines).rstrip() + "\n"
 
 

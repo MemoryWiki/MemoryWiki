@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_ROOT = REPO_ROOT / "examples" / "memory-root"
 
@@ -86,9 +85,9 @@ def render_markdown(payload: dict[str, Any]) -> str:
         "This is a tiny public smoke benchmark against `examples/memory-root`.",
         "It checks that local hybrid recall can surface the expected sample memory.",
         "",
-        "- Cases: `%s`" % payload["total"],
-        "- Passed: `%s`" % payload["passed"],
-        "- Pass rate: `%.2f`" % payload["pass_rate"],
+        "- Cases: `{}`".format(payload["total"]),
+        "- Passed: `{}`".format(payload["passed"]),
+        "- Pass rate: `{:.2f}`".format(payload["pass_rate"]),
         "",
         "| Case | Passed | Matched |",
         "|---|---:|---|",

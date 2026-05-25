@@ -59,7 +59,7 @@ class FakeManager:
                 "ProjectStore",
                 (),
                     {
-                        "read_episodic": staticmethod(lambda date_text: "day %s" % date_text),
+                        "read_episodic": staticmethod(lambda date_text: f"day {date_text}"),
                         "refresh_index": staticmethod(lambda: None),
                         "read_index": staticmethod(lambda: "# Memory Index"),
                     },

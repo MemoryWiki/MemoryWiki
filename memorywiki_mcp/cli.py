@@ -1,3 +1,5 @@
+"""CLI wrapper for launching the local MemoryWiki MCP server."""
+
 from __future__ import annotations
 
 import argparse

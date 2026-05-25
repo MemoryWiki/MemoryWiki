@@ -3,14 +3,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import shlex
 import sys
+from pathlib import Path
 from typing import Any
 
 from memorywiki_mcp.client_config import build_mcp_json
 from project_agents import render_agents_md
-
 
 SERVER_NAME = "memorywiki-memory"
 AGENTS_BLOCK_START = "<!-- BEGIN MemoryWiki MCP BRIDGE -->"
@@ -28,16 +27,16 @@ def _repo_root() -> Path:
 def _assert_safe_project_root(project_root: str | Path) -> Path:
     root = Path(project_root).expanduser()
     if not root.exists() or root.is_symlink() or not root.is_dir():
-        raise ValueError("Project root must be a real directory: %s" % root)
+        raise ValueError(f"Project root must be a real directory: {root}")
     for ancestor in root.parents:
         if ancestor.exists() and ancestor.is_symlink():
-            raise ValueError("Project root may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"Project root may not be below a symlink: {ancestor}")
     return root.resolve()
 
 
 def _read_json_no_follow(path: Path) -> dict[str, Any]:
     if path.is_symlink():
-        raise ValueError("MCP config may not be a symlink: %s" % path)
+        raise ValueError(f"MCP config may not be a symlink: {path}")
     if not path.exists():
         return {}
     flags = os.O_RDONLY
@@ -51,15 +50,15 @@ def _read_json_no_follow(path: Path) -> dict[str, Any]:
     try:
         payload = json.loads(raw or "{}")
     except json.JSONDecodeError as exc:
-        raise ValueError("MCP config is not valid JSON: %s" % path) from exc
+        raise ValueError(f"MCP config is not valid JSON: {path}") from exc
     if not isinstance(payload, dict):
-        raise ValueError("MCP config must be a JSON object: %s" % path)
+        raise ValueError(f"MCP config must be a JSON object: {path}")
     return payload
 
 
 def _write_text_no_follow(path: Path, text: str, mode: int = 0o644) -> None:
     if path.is_symlink():
-        raise ValueError("Managed install target may not be a symlink: %s" % path)
+        raise ValueError(f"Managed install target may not be a symlink: {path}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -245,7 +244,7 @@ def install_cross_project_memory(
         target = root / "AGENTS.md"
         status = "would_write"
         if target.is_symlink():
-            raise ValueError("AGENTS.md may not be a symlink: %s" % target)
+            raise ValueError(f"AGENTS.md may not be a symlink: {target}")
         if target.exists() and update_existing_agents:
             status = "would_update"
         elif target.exists() and not force_agents:
@@ -296,12 +295,12 @@ def render_human(payload: dict[str, Any]) -> str:
         "# MemoryWiki Cross-Project Install",
         "",
         "Mode: %s" % ("dry-run" if payload["dry_run"] else "write"),
-        "Project: %s" % payload["project_root"],
-        "Memory system: %s" % payload["memory_system_home"],
+        "Project: {}".format(payload["project_root"]),
+        "Memory system: {}".format(payload["memory_system_home"]),
         "",
     ]
     for action in payload["actions"]:
-        lines.append("- %s: %s" % (action["path"], action["status"]))
+        lines.append("- {}: {}".format(action["path"], action["status"]))
     return "\n".join(lines) + "\n"
 
 

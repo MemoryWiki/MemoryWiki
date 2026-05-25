@@ -7,8 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from memorywiki_release_manifest import MAX_HASH_BYTES, build_manifest, verify_manifest, write_manifest
-
+from memorywiki_release_manifest import (
+    MAX_HASH_BYTES,
+    build_manifest,
+    verify_manifest,
+    write_manifest,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

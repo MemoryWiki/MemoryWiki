@@ -8,7 +8,6 @@ from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
 from memorywiki_project_matrix import ProjectTarget, run_project_matrix
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -180,8 +179,8 @@ def test_project_matrix_warns_when_project_has_too_many_cases(tmp_path):
         _write_semantic(
             project / ".agent_memory" / "project",
             "project",
-            "matrix-target-%s" % index,
-            "Matrix target %s." % index,
+            f"matrix-target-{index}",
+            f"Matrix target {index}.",
         )
 
     payload = run_project_matrix(
@@ -191,9 +190,9 @@ def test_project_matrix_warns_when_project_has_too_many_cases(tmp_path):
                 path=project,
                 cases=[
                     {
-                        "name": "case-%s" % index,
-                        "query": "Matrix target %s" % index,
-                        "expected": ["matrix-target-%s" % index],
+                        "name": f"case-{index}",
+                        "query": f"Matrix target {index}",
+                        "expected": [f"matrix-target-{index}"],
                     }
                     for index in range(4)
                 ],

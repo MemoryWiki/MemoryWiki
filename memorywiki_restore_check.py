@@ -3,15 +3,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 from typing import Any
-
 
 SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
 REQUIRED_FILES = (
@@ -28,12 +27,12 @@ REQUIRED_FILES = (
 def _safe_backup_root(root: str | Path) -> Path:
     path = Path(root).expanduser()
     if not path.exists():
-        raise ValueError("No backup source found under %s" % path)
+        raise ValueError(f"No backup source found under {path}")
     if path.is_symlink() or not path.is_dir():
-        raise ValueError("Backup root must be a real directory: %s" % path)
+        raise ValueError(f"Backup root must be a real directory: {path}")
     for ancestor in path.parents:
         if ancestor.is_symlink():
-            raise ValueError("Backup root may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"Backup root may not be below a symlink: {ancestor}")
     return path
 
 
@@ -42,15 +41,15 @@ def _safe_restore_parent(root: str | Path | None) -> Path | None:
         return None
     path = Path(root).expanduser()
     if path.exists() and (path.is_symlink() or not path.is_dir()):
-        raise ValueError("Restore parent must be a real directory: %s" % path)
+        raise ValueError(f"Restore parent must be a real directory: {path}")
     cursor = path
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.exists() and cursor.is_symlink():
-        raise ValueError("Restore parent may not be below a symlink: %s" % cursor)
+        raise ValueError(f"Restore parent may not be below a symlink: {cursor}")
     for ancestor in cursor.parents:
         if ancestor.is_symlink():
-            raise ValueError("Restore parent may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"Restore parent may not be below a symlink: {ancestor}")
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -63,11 +62,11 @@ def _safe_name(name: str) -> str:
 
 def _assert_safe_backup_path(path: Path, backup_root: Path) -> None:
     if path.exists() and path.is_symlink():
-        raise ValueError("Backup source may not be a symlink: %s" % path)
+        raise ValueError(f"Backup source may not be a symlink: {path}")
     try:
         path.resolve(strict=False).relative_to(backup_root.resolve(strict=True))
     except ValueError:
-        raise ValueError("Backup source must stay below backup root: %s" % path)
+        raise ValueError(f"Backup source must stay below backup root: {path}")
 
 
 def _select_backup_source(
@@ -82,8 +81,8 @@ def _select_backup_source(
         raise ValueError("source must be auto, bundle, or remote")
     bundle_candidates = []
     if source in {"auto", "bundle"}:
-        bundle_candidates.extend(root.glob("%s-*.bundle" % name))
-        bundle_candidates.append(root / ("%s.bundle" % name))
+        bundle_candidates.extend(root.glob(f"{name}-*.bundle"))
+        bundle_candidates.append(root / (f"{name}.bundle"))
     bundle_candidates = [
         path
         for path in bundle_candidates
@@ -94,13 +93,13 @@ def _select_backup_source(
     if bundle_candidates:
         bundle = max(bundle_candidates, key=lambda item: item.stat().st_mtime)
         return "bundle", bundle
-    remote = root / ("%s.git" % name)
+    remote = root / (f"{name}.git")
     if source in {"auto", "remote"} and remote.exists():
         _assert_safe_backup_path(remote, root)
         if not remote.is_dir():
-            raise ValueError("Backup remote must be a real directory: %s" % remote)
+            raise ValueError(f"Backup remote must be a real directory: {remote}")
         return "remote", remote
-    raise ValueError("No backup source found for %s under %s" % (name, root))
+    raise ValueError(f"No backup source found for {name} under {root}")
 
 
 def _run(
@@ -136,7 +135,7 @@ def _check_required_files(restored_root: Path) -> dict[str, Any]:
         "argv": [],
         "returncode": 0 if not missing else 1,
         "stdout": "required files present" if not missing else "",
-        "stderr": "missing: %s" % ", ".join(missing) if missing else "",
+        "stderr": "missing: {}".format(", ".join(missing)) if missing else "",
     }
 
 
@@ -338,14 +337,14 @@ def render_human(payload: dict[str, Any]) -> str:
     lines = [
         "# MemoryWiki Restore Check",
         "",
-        "Status: %s" % payload["status"],
-        "Source: %s %s" % (payload["source_kind"], payload["source_path"]),
-        "Restored root: %s" % payload["restored_root"],
+        "Status: {}".format(payload["status"]),
+        "Source: {} {}".format(payload["source_kind"], payload["source_path"]),
+        "Restored root: {}".format(payload["restored_root"]),
         "",
     ]
     for check in payload["checks"]:
         marker = "PASS" if check["returncode"] == 0 else "FAIL"
-        lines.append("- [%s] %s" % (marker, check["name"]))
+        lines.append("- [{}] {}".format(marker, check["name"]))
     return "\n".join(lines) + "\n"
 
 

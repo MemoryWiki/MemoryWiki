@@ -1,21 +1,21 @@
+"""MCP tool handlers that bridge MemoryWiki commands to gated local memory operations."""
+
 from __future__ import annotations
 
-from dataclasses import asdict
-from datetime import datetime
 import hashlib
 import os
+import sys
+from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-import sys
-
 
 MEMORYWIKI_ROOT = Path(__file__).resolve().parents[1]
 if str(MEMORYWIKI_ROOT) not in sys.path:
     sys.path.insert(0, str(MEMORYWIKI_ROOT))
 
 from memory_index_maintain import maintain_indexes
-from memorywiki_list import entries_to_dicts, list_memories
 from memory_recall import recall as recall_memory
 from memory_system.models import (
     AuditEntry,
@@ -28,7 +28,8 @@ from memory_system.models import (
 from memory_system.paths import MemoryScopePaths
 from memory_system.retrieval_index import build_and_write_index
 from memory_system.store import ScopedMemoryStore
-from session_summary import save_summary
+from memory_system.store_guard import require_scoped_store
+from memorywiki_list import entries_to_dicts, list_memories
 from memorywiki_mcp.safety import (
     clipped_output,
     require_mcp_write_enabled,
@@ -59,7 +60,7 @@ from memorywiki_mcp.schema import (
     WriteSessionInput,
     WriteSessionOutput,
 )
-
+from session_summary import save_summary
 
 MAX_SOURCE_BYTES = 2_000_000
 MAX_OUTPUT_REFS = 12
@@ -77,7 +78,7 @@ def _store_if_exists(root: Path, scope: str) -> ScopedMemoryStore | None:
     if not root.exists():
         return None
     if root.is_symlink() or not root.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % root)
+        raise ValueError(f"Memory root must be a real directory: {root}")
     return ScopedMemoryStore(
         MemoryScopePaths.from_root(root, scope=scope),
         sanitize_on_write=True,
@@ -98,7 +99,7 @@ def _paths_for_scope(input_model: Any, scope: str) -> MemoryScopePaths:
 def _store_for_scope(input_model: Any, scope: str) -> ScopedMemoryStore:
     root = _root_for_scope(input_model, scope)
     if root.exists() and (root.is_symlink() or not root.is_dir()):
-        raise ValueError("Memory root must be a real directory: %s" % root)
+        raise ValueError(f"Memory root must be a real directory: {root}")
     return ScopedMemoryStore(
         MemoryScopePaths.from_root(root, scope=scope),
         sanitize_on_write=True,
@@ -132,7 +133,7 @@ def _assert_mcp_audit_ready(store: ScopedMemoryStore) -> None:
     """Fail before gated MCP writes if the audit ledger cannot be safely appended."""
     store._assert_mutable_managed_path(store.paths.audit_log)
     if store.paths.audit_log.exists() and not store.paths.audit_log.is_file():
-        raise ValueError("MCP audit log must be a regular file: %s" % store.paths.audit_log)
+        raise ValueError(f"MCP audit log must be a regular file: {store.paths.audit_log}")
 
 
 def _source_refs_from_input(
@@ -174,7 +175,7 @@ def _source_refs_output(refs: list[SourceRef]) -> list[dict[str, Any]]:
         rows.append(
             {
                 "kind": "metadata",
-                "path": "[TRUNCATED_SOURCE_REFS:%s]" % (len(refs) - MAX_OUTPUT_REFS),
+                "path": f"[TRUNCATED_SOURCE_REFS:{len(refs) - MAX_OUTPUT_REFS}]",
                 "identifier": None,
                 "excerpt": None,
             }
@@ -189,7 +190,7 @@ def _text_list_output(
 ) -> list[str]:
     rows = [(_safe_clipped(entry, max_chars) or "") for entry in entries[:max_items]]
     if len(entries) > max_items:
-        rows.append("[TRUNCATED_ITEMS:%s]" % (len(entries) - max_items))
+        rows.append(f"[TRUNCATED_ITEMS:{len(entries) - max_items}]")
     return rows
 
 
@@ -202,7 +203,7 @@ def _json_metadata_output(value: Any) -> Any:
     if isinstance(value, list):
         rows = [_json_metadata_output(item) for item in value[:MAX_OUTPUT_UPDATE_LOG_ITEMS]]
         if len(value) > MAX_OUTPUT_UPDATE_LOG_ITEMS:
-            rows.append("[TRUNCATED_ITEMS:%s]" % (len(value) - MAX_OUTPUT_UPDATE_LOG_ITEMS))
+            rows.append(f"[TRUNCATED_ITEMS:{len(value) - MAX_OUTPUT_UPDATE_LOG_ITEMS}]")
         return rows
     if isinstance(value, (bool, int, float)) or value is None:
         return value
@@ -222,7 +223,7 @@ def _target_path_for_paths(paths: MemoryScopePaths, kind: str, identifier: str) 
         return paths.session_file(identifier)
     if kind == "episode":
         return paths.episode_for_date(identifier)
-    raise ValueError("Unsupported memory kind: %s" % kind)
+    raise ValueError(f"Unsupported memory kind: {kind}")
 
 
 def _frontmatter_for_semantic(item: SemanticMemory) -> dict[str, Any]:
@@ -348,7 +349,7 @@ def memorywiki_read_memory(input_model: ReadMemoryInput) -> ReadMemoryOutput:
         content, frontmatter, found_identifier = hot
         frontmatter = safe_json(frontmatter)
     else:
-        raise ValueError("Unsupported memory kind: %s" % kind)
+        raise ValueError(f"Unsupported memory kind: {kind}")
 
     clipped, truncated = clipped_output(content, input_model.max_chars, input_model.full)
     return ReadMemoryOutput(
@@ -503,10 +504,10 @@ def memorywiki_write_session(input_model: WriteSessionInput) -> WriteSessionOutp
     )
     affected = [
         "sessions.jsonl",
-        "sessions/%s.md" % session.session_id,
+        f"sessions/{session.session_id}.md",
     ]
     if input_model.write_episode:
-        affected.append("episodes/%s.md" % session.ts[:10])
+        affected.append(f"episodes/{session.ts[:10]}.md")
     _append_mcp_audit(
         store,
         action="memorywiki_write_session",
@@ -542,9 +543,9 @@ def memorywiki_crystallize(input_model: CrystallizeInput) -> CrystallizeOutput:
         input_model.source_id,
     )
     affected_path = (
-        "semantic/%s.md" % input_model.id
+        f"semantic/{input_model.id}.md"
         if input_model.kind == "semantic"
-        else "procedures/%s.md" % input_model.id
+        else f"procedures/{input_model.id}.md"
     )
     replaced = False
 
@@ -552,7 +553,7 @@ def memorywiki_crystallize(input_model: CrystallizeInput) -> CrystallizeOutput:
         existing = store.read_semantic_memory(input_model.id) if store is not None else None
         replaced = existing is not None
         if existing is not None and not input_model.replace:
-            raise ValueError("semantic memory already exists; set replace=true: %s" % input_model.id)
+            raise ValueError(f"semantic memory already exists; set replace=true: {input_model.id}")
         item = SemanticMemory(
             id=input_model.id,
             scope=input_model.scope,
@@ -569,20 +570,24 @@ def memorywiki_crystallize(input_model: CrystallizeInput) -> CrystallizeOutput:
             updated_at=timestamp,
             update_log=(
                 list(existing.update_log)
-                + ["%s Update: Replaced from MCP crystallize." % timestamp]
+                + [f"{timestamp} Update: Replaced from MCP crystallize."]
                 if existing
                 else []
             ),
         )
         if not input_model.dry_run:
-            assert store is not None
+            store = require_scoped_store(
+                store,
+                root=root,
+                operation="memorywiki_crystallize semantic write",
+            )
             _assert_mcp_audit_ready(store)
             store.write_semantic_memory(item)
     else:
         existing = store.read_procedural_memory(input_model.id) if store is not None else None
         replaced = existing is not None
         if existing is not None and not input_model.replace:
-            raise ValueError("procedure already exists; set replace=true: %s" % input_model.id)
+            raise ValueError(f"procedure already exists; set replace=true: {input_model.id}")
         steps = input_model.steps or [
             line.strip("- ").strip()
             for line in input_model.content.splitlines()
@@ -604,12 +609,20 @@ def memorywiki_crystallize(input_model: CrystallizeInput) -> CrystallizeOutput:
             updated_at=timestamp,
         )
         if not input_model.dry_run:
-            assert store is not None
+            store = require_scoped_store(
+                store,
+                root=root,
+                operation="memorywiki_crystallize procedure write",
+            )
             _assert_mcp_audit_ready(store)
             store.write_procedural_memory(item)
 
     if not input_model.dry_run:
-        assert store is not None
+        store = require_scoped_store(
+            store,
+            root=root,
+            operation="memorywiki_crystallize audit",
+        )
         _append_mcp_audit(
             store,
             action="memorywiki_crystallize",
@@ -641,17 +654,17 @@ def _assert_no_symlink_components(path: Path, root: Path) -> None:
         cursor = cursor.parent
     for item in checked:
         if item.exists() and item.is_symlink():
-            raise ValueError("Source path may not include symlinks: %s" % item)
+            raise ValueError(f"Source path may not include symlinks: {item}")
         try:
             item.resolve(strict=False).relative_to(root_resolved)
         except ValueError:
-            raise ValueError("Source must stay below sources/: %s" % path)
+            raise ValueError(f"Source must stay below sources/: {path}")
 
 
 def _resolve_source(store: ScopedMemoryStore, source: str) -> Path:
     sources_dir = store.paths.sources_dir
     if not sources_dir.exists() or sources_dir.is_symlink() or not sources_dir.is_dir():
-        raise ValueError("sources/ must be a real directory: %s" % sources_dir)
+        raise ValueError(f"sources/ must be a real directory: {sources_dir}")
     candidate = Path(source).expanduser()
     if not candidate.is_absolute():
         candidate = sources_dir / candidate
@@ -660,11 +673,11 @@ def _resolve_source(store: ScopedMemoryStore, source: str) -> Path:
         resolved_source = candidate.resolve(strict=True)
         resolved_source.relative_to(sources_dir.resolve(strict=True))
     except (OSError, ValueError):
-        raise ValueError("Source must stay below sources/: %s" % source)
+        raise ValueError(f"Source must stay below sources/: {source}")
     if not resolved_source.is_file():
-        raise ValueError("Source document must be a file: %s" % candidate)
+        raise ValueError(f"Source document must be a file: {candidate}")
     if resolved_source.stat().st_size > MAX_SOURCE_BYTES:
-        raise ValueError("Source document is too large: %s" % candidate)
+        raise ValueError(f"Source document is too large: {candidate}")
     return resolved_source
 
 
@@ -676,12 +689,12 @@ def _read_source(path: Path) -> tuple[bytes, str]:
         fd = os.open(path, flags)
     except OSError:
         if path.is_symlink():
-            raise ValueError("Source document may not be a symlink: %s" % path)
+            raise ValueError(f"Source document may not be a symlink: {path}")
         raise
     try:
         size = os.fstat(fd).st_size
         if size > MAX_SOURCE_BYTES:
-            raise ValueError("Source document is too large: %s" % path)
+            raise ValueError(f"Source document is too large: {path}")
         raw = os.read(fd, size)
     finally:
         os.close(fd)
@@ -691,7 +704,7 @@ def _read_source(path: Path) -> tuple[bytes, str]:
 def _source_ref(store: ScopedMemoryStore, path: Path, digest: str, text: str) -> SourceRef:
     return SourceRef(
         kind="source",
-        path="sources/%s" % path.relative_to(store.paths.sources_dir.resolve()).as_posix(),
+        path=f"sources/{path.relative_to(store.paths.sources_dir.resolve()).as_posix()}",
         identifier=digest[:16],
         excerpt=" ".join(text.split())[:240] or None,
     )
@@ -708,7 +721,7 @@ def memorywiki_ingest_source(input_model: IngestSourceInput) -> IngestSourceOutp
         else _store_for_scope(input_model, input_model.scope)
     )
     if store is None:
-        raise ValueError("Memory root does not exist: %s" % root)
+        raise ValueError(f"Memory root does not exist: {root}")
     source_path = _resolve_source(store, input_model.source)
     raw, text = _read_source(source_path)
     digest = hashlib.sha256(raw).hexdigest()
@@ -721,8 +734,8 @@ def memorywiki_ingest_source(input_model: IngestSourceInput) -> IngestSourceOutp
     if input_model.conflict_with:
         note = input_model.conflict_note or input_model.summary or "New source conflicts with this memory."
         if store.read_semantic_memory(input_model.conflict_with) is None:
-            raise ValueError("Unknown semantic memory: %s" % input_model.conflict_with)
-        affected_paths.append("semantic/%s.md" % input_model.conflict_with)
+            raise ValueError(f"Unknown semantic memory: {input_model.conflict_with}")
+        affected_paths.append(f"semantic/{input_model.conflict_with}.md")
         if not input_model.dry_run:
             store.append_semantic_update_log(
                 input_model.conflict_with,
@@ -737,7 +750,7 @@ def memorywiki_ingest_source(input_model: IngestSourceInput) -> IngestSourceOutp
         existing = store.read_semantic_memory(input_model.id)
         update_log = list(existing.update_log) if existing else []
         if existing:
-            update_log.append("%s Update: Refreshed from %s" % (timestamp, ref.path))
+            update_log.append(f"{timestamp} Update: Refreshed from {ref.path}")
         item = SemanticMemory(
             id=input_model.id,
             scope=input_model.scope,
@@ -752,7 +765,7 @@ def memorywiki_ingest_source(input_model: IngestSourceInput) -> IngestSourceOutp
             updated_at=timestamp,
             update_log=update_log,
         )
-        affected_paths.append("semantic/%s.md" % input_model.id)
+        affected_paths.append(f"semantic/{input_model.id}.md")
         if not input_model.dry_run:
             store.write_semantic_memory(item)
     else:
@@ -771,7 +784,7 @@ def memorywiki_ingest_source(input_model: IngestSourceInput) -> IngestSourceOutp
             created_at=timestamp,
             updated_at=timestamp,
         )
-        affected_paths.append("procedures/%s.md" % input_model.id)
+        affected_paths.append(f"procedures/{input_model.id}.md")
         if not input_model.dry_run:
             store.write_procedural_memory(item)
 
@@ -838,7 +851,7 @@ def memorywiki_forget(input_model: ForgetInput) -> ForgetOutput:
             store._assert_mutable_managed_path(target)
             if target.exists():
                 if not target.is_file():
-                    raise ValueError("Forget target must be a file: %s" % target)
+                    raise ValueError(f"Forget target must be a file: {target}")
                 target.unlink()
                 store._mark_index_dirty_unlocked()
                 deleted = True

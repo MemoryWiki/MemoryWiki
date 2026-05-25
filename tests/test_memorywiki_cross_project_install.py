@@ -9,7 +9,6 @@ import pytest
 
 from memorywiki_cross_project_install import install_cross_project_memory
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

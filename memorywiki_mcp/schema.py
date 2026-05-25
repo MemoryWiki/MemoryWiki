@@ -1,10 +1,11 @@
+"""Pydantic schemas for the MemoryWiki MCP v1 tool contract."""
+
 from __future__ import annotations
 
 import re
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
-
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 SESSION_RE = re.compile(r"^session-[A-Za-z0-9][A-Za-z0-9_.-]*$")

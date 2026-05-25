@@ -4,24 +4,15 @@ import sys
 from pathlib import Path
 
 from memory_system.models import SemanticMemory
-from memory_system.paths import MemoryScopePaths
-from memory_system.store import ScopedMemoryStore
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _store(root):
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, scope="project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
-
-
-def test_source_ingest_creates_semantic_memory_without_editing_source(tmp_path):
+def test_source_ingest_creates_semantic_memory_without_editing_source(
+    tmp_path, memory_store_factory
+):
     root = tmp_path / "memory"
-    store = _store(root)
+    store = memory_store_factory(root)
     source = store.paths.sources_dir / "karpathy.md"
     source.parent.mkdir(parents=True)
     source.write_text("sources are read-only and wiki is writable\n", encoding="utf-8")
@@ -81,9 +72,9 @@ def test_source_ingest_creates_semantic_memory_without_editing_source(tmp_path):
     assert "| Sources | 1 files | sources/ |" in store.read_index()
 
 
-def test_source_ingest_rejects_symlinked_source(tmp_path):
+def test_source_ingest_rejects_symlinked_source(tmp_path, memory_store_factory):
     root = tmp_path / "memory"
-    store = _store(root)
+    store = memory_store_factory(root)
     outside = tmp_path / "outside.md"
     outside.write_text("do not ingest through symlink\n", encoding="utf-8")
     source = store.paths.sources_dir / "link.md"
@@ -146,9 +137,9 @@ def test_source_ingest_dry_run_does_not_create_missing_root(tmp_path):
     assert not root.exists()
 
 
-def test_source_ingest_rejects_symlinked_source_parent(tmp_path):
+def test_source_ingest_rejects_symlinked_source_parent(tmp_path, memory_store_factory):
     root = tmp_path / "memory"
-    store = _store(root)
+    store = memory_store_factory(root)
     outside_dir = tmp_path / "outside"
     outside_dir.mkdir()
     (outside_dir / "paper.md").write_text("do not ingest through parent symlink\n", encoding="utf-8")
@@ -181,9 +172,9 @@ def test_source_ingest_rejects_symlinked_source_parent(tmp_path):
     assert not store.paths.semantic_file("bad-source-parent").exists()
 
 
-def test_source_ingest_rejects_source_traversal(tmp_path):
+def test_source_ingest_rejects_source_traversal(tmp_path, memory_store_factory):
     root = tmp_path / "memory"
-    store = _store(root)
+    store = memory_store_factory(root)
     store.paths.sources_dir.mkdir(parents=True)
     (root / "MEMORY.md").write_text("outside sources\n", encoding="utf-8")
 
@@ -212,9 +203,11 @@ def test_source_ingest_rejects_source_traversal(tmp_path):
     assert not store.paths.semantic_file("escape").exists()
 
 
-def test_source_ingest_conflict_appends_update_log_not_overwrite(tmp_path):
+def test_source_ingest_conflict_appends_update_log_not_overwrite(
+    tmp_path, memory_store_factory
+):
     root = tmp_path / "memory"
-    store = _store(root)
+    store = memory_store_factory(root)
     store.write_semantic_memory(
         SemanticMemory(
             id="policy-status",

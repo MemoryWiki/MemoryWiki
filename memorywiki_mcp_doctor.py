@@ -3,14 +3,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 from memory_index_maintain import maintain_indexes
-
 
 SERVER_NAME = "memorywiki-memory"
 WARN_GATES = (
@@ -40,7 +39,7 @@ def _overall(checks: dict[str, dict[str, Any]]) -> str:
 
 def _load_mcp_config(path: Path) -> dict[str, Any] | None:
     if path.is_symlink():
-        raise ValueError("MCP config may not be a symlink: %s" % path)
+        raise ValueError(f"MCP config may not be a symlink: {path}")
     if not path.exists():
         return None
     flags = os.O_RDONLY
@@ -53,7 +52,7 @@ def _load_mcp_config(path: Path) -> dict[str, Any] | None:
         os.close(fd)
     payload = json.loads(text or "{}")
     if not isinstance(payload, dict):
-        raise ValueError("MCP config must be a JSON object: %s" % path)
+        raise ValueError(f"MCP config must be a JSON object: {path}")
     return payload
 
 
@@ -67,9 +66,9 @@ def _check_python(
     resolved_command = shutil.which(expanded) if not has_path_separator else None
     path = Path(resolved_command or expanded)
     if not path.exists():
-        return _check("warn", ["Python command was not found: %s" % python])
+        return _check("warn", [f"Python command was not found: {python}"])
     if not path.is_file():
-        return _check("warn", ["Python command is not a file: %s" % python])
+        return _check("warn", [f"Python command is not a file: {python}"])
     env = dict(os.environ)
     env["PYTHONPATH"] = str(repo_root)
     try:
@@ -84,7 +83,7 @@ def _check_python(
     except subprocess.TimeoutExpired:
         return _check(
             "warn",
-            ["Python import check timed out after %.1f seconds: %s" % (timeout_seconds, python)],
+            [f"Python import check timed out after {timeout_seconds:.1f} seconds: {python}"],
         )
     if result.returncode != 0:
         return _check(
@@ -101,13 +100,13 @@ def _check_roots(project_root: Path, global_root: Path) -> dict[str, Any]:
     warnings = []
     for label, root in (("project", project_root), ("global", global_root)):
         if root.exists() and root.is_symlink():
-            failures.append("%s root is a symlink: %s" % (label, root))
+            failures.append(f"{label} root is a symlink: {root}")
         elif root.exists() and not root.is_dir():
-            failures.append("%s root is not a directory: %s" % (label, root))
+            failures.append(f"{label} root is not a directory: {root}")
         elif not root.exists():
-            warnings.append("%s root does not exist yet: %s" % (label, root))
+            warnings.append(f"{label} root does not exist yet: {root}")
         else:
-            messages.append("%s root is a real directory: %s" % (label, root))
+            messages.append(f"{label} root is a real directory: {root}")
     if failures:
         return _check("fail", failures + warnings + messages)
     if warnings:
@@ -122,20 +121,20 @@ def _check_config(config_path: Path, project_root: Path, global_root: Path) -> t
         return _check("fail", [str(exc)]), _check("warn", ["Cannot evaluate write gates without a valid MCP config."])
     if payload is None:
         return (
-            _check("warn", ["MCP config is missing: %s" % config_path]),
+            _check("warn", [f"MCP config is missing: {config_path}"]),
             _check("ok", ["No MCP config write gates found."]),
         )
     servers = payload.get("mcpServers")
     if not isinstance(servers, dict) or SERVER_NAME not in servers:
         return (
-            _check("warn", ["MCP config does not define %s." % SERVER_NAME]),
+            _check("warn", [f"MCP config does not define {SERVER_NAME}."]),
             _check("ok", ["No MemoryWiki MCP write gates found."]),
         )
     server = servers[SERVER_NAME]
     env = server.get("env", {}) if isinstance(server, dict) else {}
     if not isinstance(env, dict):
-        return _check("fail", ["%s env must be an object." % SERVER_NAME]), _check("warn", ["Cannot evaluate malformed env."])
-    messages = ["MCP config defines %s." % SERVER_NAME]
+        return _check("fail", [f"{SERVER_NAME} env must be an object."]), _check("warn", ["Cannot evaluate malformed env."])
+    messages = [f"MCP config defines {SERVER_NAME}."]
     expected_project = str(project_root)
     expected_global = str(global_root)
     if env.get("MEMORY_PROJECT_ROOT") != expected_project:
@@ -143,12 +142,12 @@ def _check_config(config_path: Path, project_root: Path, global_root: Path) -> t
     if env.get("MEMORY_GLOBAL_ROOT") != expected_global:
         messages.append("MEMORY_GLOBAL_ROOT differs from doctor input.")
     gate_messages = [
-        "%s is enabled in MCP config." % name
+        f"{name} is enabled in MCP config."
         for name in WARN_GATES
         if str(env.get(name, "")).lower() in {"1", "true", "yes", "on"}
     ]
     gate_messages.extend(
-        "%s is enabled in current shell." % name
+        f"{name} is enabled in current shell."
         for name in WARN_GATES
         if str(os.getenv(name, "")).lower() in {"1", "true", "yes", "on"}
     )
@@ -168,7 +167,7 @@ def _check_index(project_root: Path, global_root: Path) -> dict[str, Any]:
         return _check("fail", [str(exc)])
     messages = []
     for item in payload["roots"]:
-        messages.append("%s index is %s." % (item["scope"], item["status"]))
+        messages.append("{} index is {}.".format(item["scope"], item["status"]))
         messages.extend(item.get("warnings", []))
     return _check("warn" if payload["rebuild_needed"] else "ok", messages, payload=payload)
 
@@ -204,11 +203,11 @@ def run_doctor(
 
 
 def render_human(payload: dict[str, Any]) -> str:
-    lines = ["# MemoryWiki MCP Doctor", "", "Status: %s" % payload["status"], ""]
+    lines = ["# MemoryWiki MCP Doctor", "", "Status: {}".format(payload["status"]), ""]
     for name, check in payload["checks"].items():
-        lines.append("## %s: %s" % (name, check["status"]))
+        lines.append("## {}: {}".format(name, check["status"]))
         for message in check.get("messages", []):
-            lines.append("- %s" % message)
+            lines.append(f"- {message}")
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 

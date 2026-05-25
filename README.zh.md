@@ -35,7 +35,7 @@ MemoryWiki 给 coding agent / chat agent 一个可长期维护的项目记忆层
 ```bash
 git clone https://github.com/MemoryWiki/MemoryWiki.git
 cd MemoryWiki
-python3 -m pip install -e ".[dev,mcp]"
+python3 -m pip install -e ".[mcp]"
 ```
 
 如果只需要 CLI：

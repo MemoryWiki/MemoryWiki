@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 from dataclasses import asdict
 from datetime import datetime
-import json
 from pathlib import Path
-import sys
 
 from memory_system.models import AuditEntry
 from memory_system.paths import MemoryScopePaths
 from memory_system.retrieval_index import build_and_write_index
 from memory_system.store import ScopedMemoryStore
+from memory_system.store_guard import require_scoped_store
 
 
 def build_store(root: Path, scope: str, *, create: bool = True) -> ScopedMemoryStore | None:
@@ -19,7 +20,7 @@ def build_store(root: Path, scope: str, *, create: bool = True) -> ScopedMemoryS
         if not create:
             return None
     elif root.is_symlink() or not root.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % root)
+        raise ValueError(f"Memory root must be a real directory: {root}")
     return ScopedMemoryStore(
         MemoryScopePaths.from_root(root, scope=scope),
         sanitize_on_write=True,
@@ -40,7 +41,7 @@ def target_path_for_paths(paths: MemoryScopePaths, kind: str, identifier: str) -
         return paths.session_file(identifier)
     if kind == "episode":
         return paths.episode_for_date(identifier)
-    raise ValueError("Unsupported memory kind: %s" % kind)
+    raise ValueError(f"Unsupported memory kind: {kind}")
 
 
 def delete_target(store: ScopedMemoryStore, path: Path) -> bool:
@@ -49,7 +50,7 @@ def delete_target(store: ScopedMemoryStore, path: Path) -> bool:
         if not path.exists():
             return False
         if not path.is_file():
-            raise ValueError("Forget target must be a file: %s" % path)
+            raise ValueError(f"Forget target must be a file: {path}")
         path.unlink()
         store._mark_index_dirty_unlocked()
         return True
@@ -77,7 +78,7 @@ def forget(args) -> dict:
         relative_path = str(path.relative_to(store.paths.root))
     deleted = False
     if args.apply:
-        assert store is not None
+        store = require_scoped_store(store, root=root, operation="forget apply")
         deleted = delete_target(store, path)
     entry = AuditEntry(
         ts=datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -93,7 +94,7 @@ def forget(args) -> dict:
         },
     )
     if args.apply:
-        assert store is not None
+        store = require_scoped_store(store, root=root, operation="forget audit")
         store.append_audit(entry)
         if deleted:
             refresh_generated_indexes(store, args.scope)
@@ -111,8 +112,7 @@ def render_human(payload: dict) -> str:
     mode = "DRY RUN" if payload["dry_run"] else "APPLIED"
     status = "deleted" if payload["deleted"] else "not deleted"
     return (
-        "%s forget %s/%s: %s\n"
-        % (mode, payload["target_kind"], payload["target_id"], status)
+        "{} forget {}/{}: {}\n".format(mode, payload["target_kind"], payload["target_id"], status)
     )
 
 

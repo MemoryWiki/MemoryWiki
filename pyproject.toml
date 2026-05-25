@@ -34,7 +34,10 @@ dev = [
   "mypy>=1.10.0,<2.0.0",
   "pre-commit>=3.5.0,<5.0.0",
   "pytest>=8.0.0,<9.0.0",
+  "pytest-cov>=5.0.0,<7.0.0",
   "ruff>=0.4.0,<1.0.0",
+  "bandit>=1.7.8,<2.0.0",
+  "pip-audit>=2.7.0,<3.0.0",
 ]
 mcp = [
   "mcp[cli]>=1.27.1,<2.0.0 ; python_version >= '3.10'",
@@ -55,6 +58,7 @@ memorywiki-agents-review-prompt = "agents_review_prompt:main"
 memorywiki-backup = "memory_backup:main"
 memorywiki-crystallize = "memory_crystallize:main"
 memorywiki-crystallize-candidates = "memory_crystallize_candidates:main"
+memorywiki-config = "memorywiki_config:main"
 memorywiki-cross-project-install = "memorywiki_cross_project_install:main"
 memorywiki-feedback = "memory_feedback:main"
 memorywiki-forget = "memory_forget:main"
@@ -71,6 +75,7 @@ memorywiki-mcp-contract = "memorywiki_mcp_contract:main"
 memorywiki-mcp-doctor = "memorywiki_mcp_doctor:main"
 memorywiki-mcp-config = "memorywiki_mcp.client_config:main"
 memorywiki-mcp-smoke = "memorywiki_mcp.smoke_client:main"
+memorywiki-merge-episodes = "merge_episodes:main"
 memorywiki-ops-dashboard = "memorywiki_ops_dashboard:main"
 memorywiki-project-agents = "project_agents:main"
 memorywiki-project-matrix = "memorywiki_project_matrix:main"
@@ -84,117 +89,98 @@ memorywiki-review = "memory_review:main"
 memorywiki-session-summary = "session_summary:main"
 memorywiki-timeline = "memory_timeline:main"
 memorywiki-wake-prompt = "generate_wake_prompt:main"
+mw = "mw_cli:main"
 
 [tool.setuptools.data-files]
 "memorywiki" = [
   "ROADMAP.md",
 ]
 "memorywiki/docs" = [
-  "docs/demo-cross-project-recall.md",
-  "docs/demo-60-second-script.md",
-  "docs/faq.md",
-  "docs/install.md",
-  "docs/memorywiki-golden-cases.json",
-  "docs/memorywiki-mcp-client-setup.md",
-  "docs/memorywiki-mcp-v1-contract.json",
-  "docs/memorywiki-mcp-v1-spec.md",
-]
-"memorywiki/docs/getting-started" = [
-  "docs/getting-started/quickstart.md",
-]
-"memorywiki/docs/troubleshooting" = [
-  "docs/troubleshooting/common-errors.md",
-]
-"memorywiki/docs/clients" = [
-  "docs/clients/claude-desktop.md",
-  "docs/clients/codex.md",
-  "docs/clients/cursor.md",
-  "docs/clients/generic-mcp.md",
-]
-"memorywiki/docs/benchmarks" = [
-  "docs/benchmarks/mini-benchmark-results.md",
-]
-"memorywiki/docs/internal" = [
-  "docs/internal/first-week-feedback.md",
-  "docs/internal/memory_review_followups.md",
-]
-"memorywiki/docs/internal/launch" = [
-  "docs/internal/launch/github-profile-and-assets.md",
-  "docs/internal/launch/github-publication-checklist.md",
-  "docs/internal/launch/marketing-plan.md",
-  "docs/internal/launch/public-go-live-runbook.md",
-  "docs/internal/launch/release-playbook.md",
-  "docs/internal/launch/demo-assets.md",
-  "docs/internal/launch/launch-copy.md",
-  "docs/internal/launch/v0.1.0-release-notes.md",
+  "docs/*.json",
+  "docs/*.md",
 ]
 "memorywiki/docs/assets" = [
-  "docs/assets/memorywiki-avatar.png",
-  "docs/assets/memorywiki-avatar.svg",
-  "docs/assets/memorywiki-quickstart.gif",
-  "docs/assets/memorywiki-social-preview.png",
-  "docs/assets/memorywiki-social-preview.svg",
-  "docs/assets/recall-output.svg",
+  "docs/assets/*",
+]
+"memorywiki/docs/benchmarks" = [
+  "docs/benchmarks/*.md",
+]
+"memorywiki/docs/clients" = [
+  "docs/clients/*.md",
+]
+"memorywiki/docs/getting-started" = [
+  "docs/getting-started/*.md",
+]
+"memorywiki/docs/troubleshooting" = [
+  "docs/troubleshooting/*.md",
+]
+"memorywiki/docs/user-guide" = [
+  "docs/user-guide/*.md",
 ]
 "memorywiki/benchmarks" = [
-  "benchmarks/mini_recall_benchmark.py",
+  "benchmarks/*.py",
 ]
 "memorywiki/examples" = [
-  "examples/project-matrix.example.json",
+  "examples/*.json",
 ]
 "memorywiki/examples/mcp" = [
   "examples/mcp/.mcp.example.json",
+  "examples/mcp/*.md",
 ]
 "memorywiki/examples/memory-root" = [
   "examples/memory-root/.gitignore",
-  "examples/memory-root/INDEX.md",
-  "examples/memory-root/MEMORY.md",
+  "examples/memory-root/*.md",
 ]
 "memorywiki/examples/memory-root/episodes" = [
-  "examples/memory-root/episodes/2026-05-17.md",
+  "examples/memory-root/episodes/*.md",
 ]
 "memorywiki/examples/memory-root/procedures" = [
-  "examples/memory-root/procedures/explicit-save.md",
+  "examples/memory-root/procedures/*.md",
 ]
 "memorywiki/examples/memory-root/retrieval" = [
-  "examples/memory-root/retrieval/index.jsonl",
+  "examples/memory-root/retrieval/*.jsonl",
 ]
 "memorywiki/examples/memory-root/semantic" = [
-  "examples/memory-root/semantic/cross-project-recall.md",
-  "examples/memory-root/semantic/lifecycle-governance.md",
-  "examples/memory-root/semantic/memorywiki-overview.md",
-  "examples/memory-root/semantic/memorywiki-pkm-positioning.md",
-  "examples/memory-root/semantic/operator-quality-loop.md",
-  "examples/memory-root/semantic/privacy-public-clean.md",
-  "examples/memory-root/semantic/source-ingest-provenance.md",
+  "examples/memory-root/semantic/*.md",
 ]
 "memorywiki/examples/memory-root/sessions" = [
-  "examples/memory-root/sessions/session-20260517-000000.md",
+  "examples/memory-root/sessions/*.md",
 ]
 "memorywiki/examples/demo-project" = [
   "examples/demo-project/.mcp.json",
-  "examples/demo-project/README.md",
+  "examples/demo-project/*.md",
 ]
 "memorywiki/examples/demo-project/.agent_memory/project" = [
-  "examples/demo-project/.agent_memory/project/INDEX.md",
-  "examples/demo-project/.agent_memory/project/MEMORY.md",
+  "examples/demo-project/.agent_memory/project/*.md",
 ]
 "memorywiki/examples/demo-project/.agent_memory/project/episodes" = [
-  "examples/demo-project/.agent_memory/project/episodes/2026-05-17.md",
+  "examples/demo-project/.agent_memory/project/episodes/*.md",
 ]
 "memorywiki/examples/demo-project/.agent_memory/project/retrieval" = [
-  "examples/demo-project/.agent_memory/project/retrieval/index.jsonl",
+  "examples/demo-project/.agent_memory/project/retrieval/*.jsonl",
 ]
 "memorywiki/examples/demo-project/.agent_memory/project/semantic" = [
-  "examples/demo-project/.agent_memory/project/semantic/memorywiki-overview.md",
+  "examples/demo-project/.agent_memory/project/semantic/*.md",
 ]
 "memorywiki/examples/demo-project/.agent_memory/project/sessions" = [
-  "examples/demo-project/.agent_memory/project/sessions/session-20260517-000000.md",
+  "examples/demo-project/.agent_memory/project/sessions/*.md",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.coverage.run]
+branch = false
+source = ["memory_system", "memorywiki_mcp"]
+omit = [
+  "*/pytest-*/*",
+  "*/memorywiki-restore-*/*",
+]
+
+[tool.coverage.report]
+skip_empty = true
+show_missing = true
 
 [tool.setuptools]
 py-modules = [
@@ -205,6 +191,7 @@ py-modules = [
   "memory_backup",
   "memory_crystallize",
   "memory_crystallize_candidates",
+  "memorywiki_config",
   "memory_feedback",
   "memory_forget",
   "memory_health",
@@ -227,6 +214,7 @@ py-modules = [
   "memorywiki_release_manifest",
   "memorywiki_restore_check",
   "merge_episodes",
+  "mw_cli",
   "project_agents",
   "project_profile",
   "retrieval_golden_eval",
@@ -244,8 +232,8 @@ target-version = "py39"
 line-length = 100
 
 [tool.ruff.lint]
-select = ["F", "E", "W"]
-ignore = ["E501"]
+select = ["F", "E", "W", "B", "I", "UP031", "UP032"]
+ignore = ["B904", "E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "memorywiki_mcp/tools.py" = ["E402"]

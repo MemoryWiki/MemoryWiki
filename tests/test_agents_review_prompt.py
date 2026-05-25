@@ -4,7 +4,6 @@ from pathlib import Path
 
 from agents_review_prompt import render_agents_review_prompt
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

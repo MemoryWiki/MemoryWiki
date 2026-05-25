@@ -193,7 +193,7 @@ def test_search_history_sanitizes_manually_edited_rows(tmp_path):
             {
                 "ts": "2026-05-08T10:00:00+01:00",
                 "role": "user",
-                "content": "timezone key=%s" % fake_key,
+                "content": f"timezone key={fake_key}",
             }
         )
         + "\n",
@@ -249,7 +249,7 @@ def test_search_history_uses_bounded_jsonl_reader(tmp_path):
     rows = [
         json.dumps(
             {
-                "ts": "2026-05-08T10:00:%02d+01:00" % (index % 60),
+                "ts": f"2026-05-08T10:00:{index % 60:02d}+01:00",
                 "role": "user",
                 "content": "ordinary bounded row",
             }

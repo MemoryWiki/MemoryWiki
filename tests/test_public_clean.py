@@ -1,7 +1,6 @@
-from pathlib import Path
 import re
 import subprocess
-
+from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -37,13 +36,23 @@ FORBIDDEN_MARKERS = [
 
 
 SKIP_DIRS = {
+    ".codegraph",
     ".git",
+    ".idea",
     ".mypy_cache",
+    ".pyrefly",
+    ".pyrefly_cache",
     ".pytest_cache",
     ".qodercn",
     ".ruff_cache",
+    ".venv",
+    ".vscode",
     "__pycache__",
+    "build",
+    "dist",
+    "venv",
 }
+SKIP_FILE_PREFIXES = (".coverage", "codegraph-")
 SKIP_SUFFIXES = {".pyc", ".pyo"}
 ARCHIVE_SUFFIXES = {".skill", ".zip", ".whl", ".tar", ".gz", ".tgz"}
 SECRET_PATTERNS = [
@@ -60,24 +69,26 @@ def test_public_tree_has_no_private_or_legacy_markers():
     for path in REPO_ROOT.rglob("*"):
         relative = path.relative_to(REPO_ROOT)
         if path.name == ".git" and path != REPO_ROOT / ".git":
-            offenders.append("%s is a nested git repository" % relative)
+            offenders.append(f"{relative} is a nested git repository")
             continue
         if any(part in SKIP_DIRS for part in path.parts):
+            continue
+        if path.name.startswith(SKIP_FILE_PREFIXES):
             continue
         if path.suffix in SKIP_SUFFIXES or not path.is_file():
             continue
         if path.suffix in ARCHIVE_SUFFIXES:
-            offenders.append("%s is an archive artifact" % relative)
+            offenders.append(f"{relative} is an archive artifact")
             continue
         data = path.read_bytes()
         for marker in FORBIDDEN_MARKERS:
             if relative in allowed_marker_files:
                 continue
             if marker.encode("utf-8") in data:
-                offenders.append("%s contains %s" % (relative, marker))
+                offenders.append(f"{relative} contains {marker}")
         for pattern in SECRET_PATTERNS:
             if pattern.search(data):
-                offenders.append("%s contains secret-like material" % path.relative_to(REPO_ROOT))
+                offenders.append(f"{path.relative_to(REPO_ROOT)} contains secret-like material")
     assert offenders == []
 
 

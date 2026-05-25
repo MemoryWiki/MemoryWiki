@@ -1,3 +1,5 @@
+"""Public package exports for the MemoryWiki storage and retrieval core."""
+
 from memory_system.compressor import MemoryCompressor
 from memory_system.config import MemoryConfig
 from memory_system.manager import MemoryManager

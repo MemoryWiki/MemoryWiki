@@ -5,12 +5,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+from memory_health import run_health
 from memory_system.models import SemanticMemory, SourceRef
 from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
-
-from memory_health import run_health
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

@@ -5,12 +5,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+from memory_crystallize_candidates import propose_candidates
 from memory_system.models import SessionFile
 from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
-
-from memory_crystallize_candidates import propose_candidates
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

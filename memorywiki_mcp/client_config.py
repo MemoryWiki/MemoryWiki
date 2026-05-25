@@ -1,12 +1,15 @@
+"""Generate safe read-mostly MCP client configuration for MemoryWiki."""
+
 from __future__ import annotations
 
 import argparse
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
+from memory_system.config import default_memory_timezone
 
 DEFAULT_SERVER_NAME = "memorywiki-memory"
 MAX_CONFIG_BYTES = 2_000_000
@@ -43,7 +46,7 @@ def build_server_config(
         "MEMORY_BACKEND": "local",
         "MEMORY_PROJECT_ROOT": _as_abs(project_root or root / ".agent_memory" / "project"),
         "MEMORY_GLOBAL_ROOT": _as_abs(global_root or Path.home() / ".agent_memory" / "global"),
-        "MEMORY_TIMEZONE": os.getenv("MEMORY_TIMEZONE", "Asia/Shanghai"),
+        "MEMORY_TIMEZONE": os.getenv("MEMORY_TIMEZONE", default_memory_timezone()),
     }
     if write_enabled:
         env["MEMORY_MCP_WRITE_ENABLED"] = "true"
@@ -88,17 +91,17 @@ def _assert_no_symlink_output_parent(path: Path) -> None:
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.exists() and cursor.is_symlink():
-        raise ValueError("MCP config output parent may not be a symlink: %s" % cursor)
+        raise ValueError(f"MCP config output parent may not be a symlink: {cursor}")
     for ancestor in cursor.parents:
         if ancestor.exists() and ancestor.is_symlink():
-            raise ValueError("MCP config output parent may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"MCP config output parent may not be below a symlink: {ancestor}")
 
 
 def _write_text_no_follow(path: Path, text: str) -> None:
     if len(text.encode("utf-8")) > MAX_CONFIG_BYTES:
-        raise ValueError("MCP config output exceeds safe size limit: %s" % path)
+        raise ValueError(f"MCP config output exceeds safe size limit: {path}")
     if path.exists() and path.is_symlink():
-        raise ValueError("MCP config output may not be a symlink: %s" % path)
+        raise ValueError(f"MCP config output may not be a symlink: {path}")
     _assert_no_symlink_output_parent(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
@@ -108,7 +111,7 @@ def _write_text_no_follow(path: Path, text: str) -> None:
         fd = os.open(path, flags, 0o600)
     except OSError:
         if path.is_symlink():
-            raise ValueError("MCP config output may not be a symlink: %s" % path)
+            raise ValueError(f"MCP config output may not be a symlink: {path}")
         raise
     try:
         os.write(fd, text.encode("utf-8"))

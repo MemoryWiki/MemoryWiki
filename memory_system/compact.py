@@ -1,3 +1,5 @@
+"""Manual and proposal-based compaction helpers for MemoryWiki roots."""
+
 from __future__ import annotations
 
 import argparse
@@ -45,7 +47,7 @@ def _selected_episode_text(store: ScopedMemoryStore, since: str | int | None) ->
         episode = store.read_episode(date_text)
         if episode is None:
             continue
-        blocks.append("# Episode %s\n\n%s" % (date_text, episode.body.strip()))
+        blocks.append(f"# Episode {date_text}\n\n{episode.body.strip()}")
     return "\n\n".join(blocks)
 
 
@@ -104,7 +106,7 @@ def _assert_no_symlinked_ancestor(path: Path) -> None:
     for ancestor in (path, *path.parents):
         if ancestor.exists() and ancestor.is_symlink():
             raise ValueError(
-                "Proposal path may not be or be below a symlink: %s" % ancestor
+                f"Proposal path may not be or be below a symlink: {ancestor}"
             )
 
 
@@ -117,12 +119,12 @@ def _read_proposal_file(path: Path) -> str:
         fd = os.open(path, flags)
     except OSError:
         if path.is_symlink():
-            raise ValueError("Proposal file may not be a symlink: %s" % path)
+            raise ValueError(f"Proposal file may not be a symlink: {path}")
         raise
     try:
         size = os.fstat(fd).st_size
         if size > MAX_MANAGED_READ_BYTES:
-            raise ValueError("Proposal file exceeds safe read limit: %s" % path)
+            raise ValueError(f"Proposal file exceeds safe read limit: {path}")
         return os.read(fd, size).decode("utf-8")
     finally:
         try:
@@ -134,7 +136,7 @@ def _read_proposal_file(path: Path) -> str:
 def _write_proposal_file(path: Path, text: str) -> None:
     _assert_no_symlinked_ancestor(path.parent)
     if path.exists() and path.is_symlink():
-        raise ValueError("Proposal file may not be a symlink: %s" % path)
+        raise ValueError(f"Proposal file may not be a symlink: {path}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -142,7 +144,7 @@ def _write_proposal_file(path: Path, text: str) -> None:
         fd = os.open(path, flags, 0o600)
     except OSError:
         if path.is_symlink():
-            raise ValueError("Proposal file may not be a symlink: %s" % path)
+            raise ValueError(f"Proposal file may not be a symlink: {path}")
         raise
     try:
         os.write(fd, text.encode("utf-8"))
@@ -172,9 +174,8 @@ def _find_pending_response(store: ScopedMemoryStore) -> Path | None:
 
 
 def _create_pending_prompt(store: ScopedMemoryStore, since: str | int | None) -> Path:
-    pending_dir = store.paths.pending_dir / (
-        "compact-%s" % datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
-    )
+    suffix = datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
+    pending_dir = store.paths.pending_dir / f"compact-{suffix}"
     store._assert_safe_managed_path(pending_dir)
     pending_dir.mkdir(parents=True, exist_ok=False)
     store._atomic_write_text(pending_dir / "prompt.txt", _build_manual_prompt(store, since))
@@ -201,7 +202,7 @@ def _write_proposal_from_response(
     out_dir.mkdir(parents=True, exist_ok=True)
     proposed_path = out_dir / "MEMORY.md.proposed"
     if proposed_path.is_symlink():
-        raise ValueError("Proposal file may not be a symlink: %s" % proposed_path)
+        raise ValueError(f"Proposal file may not be a symlink: {proposed_path}")
     _write_proposal_file(proposed_path, _neutralize_proposal_text(store, memory_md))
     user_md = payload.get("user_md")
     if user_md is not None:
@@ -211,7 +212,7 @@ def _write_proposal_from_response(
         user_proposed_path = out_dir / "USER.md.proposed"
         if user_proposed_path.is_symlink():
             raise ValueError(
-                "Proposal file may not be a symlink: %s" % user_proposed_path
+                f"Proposal file may not be a symlink: {user_proposed_path}"
             )
         _write_proposal_file(
             user_proposed_path, _neutralize_proposal_text(store, user_text)
@@ -227,11 +228,11 @@ def _apply_proposal(store: ScopedMemoryStore, out_dir: Path) -> Path:
     proposed = out_dir / "MEMORY.md.proposed"
     user_proposed = out_dir / "USER.md.proposed"
     if proposed.is_symlink():
-        raise ValueError("Proposal file may not be a symlink: %s" % proposed)
+        raise ValueError(f"Proposal file may not be a symlink: {proposed}")
     if not proposed.exists():
-        raise FileNotFoundError("Missing proposal: %s" % proposed)
+        raise FileNotFoundError(f"Missing proposal: {proposed}")
     if user_proposed.is_symlink():
-        raise ValueError("Proposal file may not be a symlink: %s" % user_proposed)
+        raise ValueError(f"Proposal file may not be a symlink: {user_proposed}")
     memory_text = _neutralize_proposal_text(store, _read_proposal_file(proposed))
     if not memory_text.strip().startswith("# Core Memory"):
         raise ValueError("MEMORY.md.proposed must start with '# Core Memory'")
@@ -241,11 +242,11 @@ def _apply_proposal(store: ScopedMemoryStore, out_dir: Path) -> Path:
         if not user_text.strip().startswith("# User Memory"):
             raise ValueError("USER.md.proposed must start with '# User Memory'")
     timestamp = datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
-    backup = store.paths.root / ("MEMORY.md.bak.%s" % timestamp)
+    backup = store.paths.root / (f"MEMORY.md.bak.{timestamp}")
     current_memory = store.read_core_memory()
     store._atomic_write_text(backup, current_memory)
     if user_text is not None:
-        user_backup = store.paths.root / ("USER.md.bak.%s" % timestamp)
+        user_backup = store.paths.root / (f"USER.md.bak.{timestamp}")
         current_user = store.read_user_memory()
         store._atomic_write_text(user_backup, current_user)
     store.write_core_memory(memory_text)
@@ -270,10 +271,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.mode == "dry-run":
         dates = store.list_episodes(since=since)
-        print("Scope: %s" % args.scope)
-        print("Root: %s" % store.paths.root)
-        print("Current MEMORY.md chars: %s" % len(store.read_core_memory()))
-        print("Selected episodes: %s" % (", ".join(dates) if dates else "none"))
+        print(f"Scope: {args.scope}")
+        print(f"Root: {store.paths.root}")
+        print(f"Current MEMORY.md chars: {len(store.read_core_memory())}")
+        print(f"Selected episodes: {', '.join(dates) if dates else 'none'}")
         return 0
 
     if args.mode == "propose":
@@ -282,16 +283,16 @@ def main(argv: list[str] | None = None) -> int:
         pending_dir = _find_pending_response(store)
         if pending_dir is None:
             pending_dir = _create_pending_prompt(store, since)
-            print("Manual compaction prompt created: %s" % (pending_dir / "prompt.txt"))
+            print(f"Manual compaction prompt created: {pending_dir / 'prompt.txt'}")
             print("Write response.json in that folder, then rerun the same command.")
             return 2
         proposed_path = _write_proposal_from_response(pending_dir, out_dir, store)
-        print("Wrote proposal: %s" % proposed_path)
+        print(f"Wrote proposal: {proposed_path}")
         return 0
 
     backup = _apply_proposal(store, out_dir)
     print("Applied proposal to MEMORY.md")
-    print("Backup: %s" % backup)
+    print(f"Backup: {backup}")
     return 0
 
 
@@ -299,5 +300,5 @@ if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:
-        print("compact.py error: %s" % exc, file=sys.stderr)
+        print(f"compact.py error: {exc}", file=sys.stderr)
         raise SystemExit(1)

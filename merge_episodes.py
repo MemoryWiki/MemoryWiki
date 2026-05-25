@@ -34,11 +34,11 @@ def _read_source_file(path: Path) -> str | None:
 
 def _safe_daily_files(src_dir: Path) -> list[Path]:
     if src_dir.is_symlink():
-        raise ValueError("Source memory directory may not be a symlink: %s" % src_dir)
+        raise ValueError(f"Source memory directory may not be a symlink: {src_dir}")
     if not src_dir.exists():
         return []
     if not src_dir.is_dir():
-        raise ValueError("Source memory path must be a directory: %s" % src_dir)
+        raise ValueError(f"Source memory path must be a directory: {src_dir}")
     files = []
     for path in sorted(src_dir.glob("20??-??-??.md")):
         try:
@@ -71,7 +71,7 @@ def merge_episodes(
     imported = []
     for source_file in _safe_daily_files(src_path):
         date_text = source_file.stem
-        marker = "source: cowork:%s" % date_text
+        marker = f"source: cowork:{date_text}"
         existing_episode = store.read_episode(date_text)
         if existing_episode is not None and marker in existing_episode.body:
             continue
@@ -86,7 +86,7 @@ def merge_episodes(
         imported_path = store.append_to_episode(
             date_text,
             "00:00 Cowork import",
-            "<!-- %s -->\n\n%s" % (marker, body),
+            f"<!-- {marker} -->\n\n{body}",
         )
         imported.append(imported_path)
     return imported
@@ -109,7 +109,7 @@ def main() -> None:
         dry_run=args.dry_run,
     )
     action = "Would import" if args.dry_run else "Imported"
-    print("%s %s episode%s" % (action, len(imported), "" if len(imported) == 1 else "s"))
+    print("{} {} episode{}".format(action, len(imported), "" if len(imported) == 1 else "s"))
     for path in imported:
         print(path)
 

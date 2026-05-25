@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timedelta, timezone
 import json
 import os
-from pathlib import Path
 import re
 import sys
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any
 
 from memory_system.sanitizer import sanitize_text
-
 
 LEDGER_NAMES = ("retrieval_feedback.jsonl", "audit.jsonl", "source_ingest.jsonl")
 MAX_LEDGER_READ_BYTES = 2_000_000
@@ -49,15 +48,15 @@ def _parse_ts(value: Any) -> datetime | None:
 def _safe_root(root: str | Path) -> Path:
     path = Path(root).expanduser()
     if path.exists() and (path.is_symlink() or not path.is_dir()):
-        raise ValueError("Memory root must be a real directory: %s" % path)
+        raise ValueError(f"Memory root must be a real directory: {path}")
     cursor = path
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.exists() and cursor.is_symlink():
-        raise ValueError("Memory root may not be below a symlink: %s" % cursor)
+        raise ValueError(f"Memory root may not be below a symlink: {cursor}")
     for parent in cursor.parents:
         if parent.is_symlink():
-            raise ValueError("Memory root may not be below a symlink: %s" % parent)
+            raise ValueError(f"Memory root may not be below a symlink: {parent}")
     return path
 
 
@@ -72,30 +71,30 @@ def _assert_no_symlink_ancestors(path: Path, root: Path) -> None:
         cursor = cursor.parent
     for item in checked:
         if item.exists() and item.is_symlink():
-            raise ValueError("Lifecycle path may not include symlinks: %s" % item)
+            raise ValueError(f"Lifecycle path may not include symlinks: {item}")
         try:
             item.resolve(strict=False).relative_to(root_resolved)
         except ValueError:
-            raise ValueError("Lifecycle path must stay below memory root: %s" % path)
+            raise ValueError(f"Lifecycle path must stay below memory root: {path}")
 
 
 def _safe_ledger_path(root: Path, ledger: str) -> Path:
     if ledger.startswith("/") or "\\" in ledger:
-        raise ValueError("Ledger must be a relative MemoryWiki ledger path: %s" % ledger)
+        raise ValueError(f"Ledger must be a relative MemoryWiki ledger path: {ledger}")
     rel = Path(ledger)
     if any(part in ("", ".", "..") for part in rel.parts):
-        raise ValueError("Ledger must be a relative MemoryWiki ledger path: %s" % ledger)
+        raise ValueError(f"Ledger must be a relative MemoryWiki ledger path: {ledger}")
     allowed = ledger in LEDGER_NAMES or (
         len(rel.parts) == 2 and rel.parts[0] == "_pending" and rel.name.endswith(".jsonl")
     )
     if not allowed:
-        raise ValueError("Unsupported lifecycle ledger: %s" % ledger)
+        raise ValueError(f"Unsupported lifecycle ledger: {ledger}")
     path = root / rel
     _assert_no_symlink_ancestors(path, root)
     try:
         path.resolve(strict=False).relative_to(root.resolve(strict=False))
     except ValueError:
-        raise ValueError("Ledger must stay below memory root: %s" % ledger)
+        raise ValueError(f"Ledger must stay below memory root: {ledger}")
     return path
 
 
@@ -106,7 +105,7 @@ def _safe_archive_name(ledger: str) -> str:
 
 def _open_read_no_follow(path: Path) -> tuple[int, bytes]:
     if path.exists() and (path.is_symlink() or not path.is_file()):
-        raise ValueError("Lifecycle ledger must be a real file: %s" % path)
+        raise ValueError(f"Lifecycle ledger must be a real file: {path}")
     flags = os.O_RDONLY
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -114,7 +113,7 @@ def _open_read_no_follow(path: Path) -> tuple[int, bytes]:
     try:
         size = os.fstat(fd).st_size
         if size > MAX_LEDGER_READ_BYTES:
-            raise ValueError("Lifecycle ledger exceeds safe read limit: %s" % path)
+            raise ValueError(f"Lifecycle ledger exceeds safe read limit: {path}")
         raw = os.read(fd, size)
     finally:
         os.close(fd)
@@ -192,11 +191,11 @@ def _scan_ledgers(root: Path) -> list[str]:
     pending = root / "_pending"
     if pending.exists():
         if pending.is_symlink() or not pending.is_dir():
-            raise ValueError("_pending must be a real directory: %s" % pending)
+            raise ValueError(f"_pending must be a real directory: {pending}")
         for path in sorted(pending.glob("*.jsonl")):
             if path.is_symlink() or not path.is_file():
-                raise ValueError("Pending ledger must be a real file: %s" % path)
-            ledgers.append("_pending/%s" % path.name)
+                raise ValueError(f"Pending ledger must be a real file: {path}")
+            ledgers.append(f"_pending/{path.name}")
     return ledgers
 
 
@@ -245,8 +244,7 @@ def _ledger_summary(
                 "ledger": ledger,
                 "old_row_count": len(old_rows),
                 "cutoff": cutoff.isoformat(),
-                "action": "archive old rows with --write --apply-scope %s --apply-ledger %s"
-                % (scope, ledger),
+                "action": f"archive old rows with --write --apply-scope {scope} --apply-ledger {ledger}",
             }
         )
     if data["duplicates"]:
@@ -279,16 +277,16 @@ def _archive_status(root: Path, ledger: str) -> dict[str, Any]:
     if not archive_root.exists():
         return {"months": [], "latest_mtime": None, "path_count": 0}
     if archive_root.is_symlink() or not archive_root.is_dir():
-        raise ValueError("Lifecycle archive must be a real directory: %s" % archive_root)
+        raise ValueError(f"Lifecycle archive must be a real directory: {archive_root}")
     safe_name = _safe_archive_name(ledger)
     paths = []
     for month_dir in sorted(archive_root.glob("????-??")):
         if month_dir.is_symlink() or not month_dir.is_dir():
-            raise ValueError("Lifecycle archive month must be a real directory: %s" % month_dir)
+            raise ValueError(f"Lifecycle archive month must be a real directory: {month_dir}")
         path = month_dir / safe_name
         if path.exists():
             if path.is_symlink() or not path.is_file():
-                raise ValueError("Lifecycle archive file must be a real file: %s" % path)
+                raise ValueError(f"Lifecycle archive file must be a real file: {path}")
             paths.append(path)
     latest = max((path.stat().st_mtime for path in paths), default=0)
     return {
@@ -300,7 +298,7 @@ def _archive_status(root: Path, ledger: str) -> dict[str, Any]:
 
 def _write_text_no_follow(path: Path, text: str, mode: int = 0o600) -> None:
     if path.exists() and path.is_symlink():
-        raise ValueError("Lifecycle write target may not be a symlink: %s" % path)
+        raise ValueError(f"Lifecycle write target may not be a symlink: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     if hasattr(os, "O_NOFOLLOW"):
@@ -314,7 +312,7 @@ def _write_text_no_follow(path: Path, text: str, mode: int = 0o600) -> None:
 
 def _append_text_no_follow(path: Path, text: str, mode: int = 0o600) -> None:
     if path.exists() and path.is_symlink():
-        raise ValueError("Lifecycle write target may not be a symlink: %s" % path)
+        raise ValueError(f"Lifecycle write target may not be a symlink: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
     if hasattr(os, "O_NOFOLLOW"):
@@ -344,7 +342,7 @@ def _archive_ledger(
         month = row["ts"].strftime("%Y-%m")
         by_month.setdefault(month, []).append(row)
     affected = [
-        "archive/%s/%s" % (month, _safe_archive_name(ledger))
+        f"archive/{month}/{_safe_archive_name(ledger)}"
         for month in sorted(by_month)
     ]
     payload = {
@@ -373,8 +371,7 @@ def _archive_ledger(
             "".join(row["line"].rstrip("\n") + "\n" for row in month_rows),
         )
         index_line = (
-            "- %s: archived %s rows from `%s`; remaining active rows: %s; cutoff: %s\n"
-            % (
+            "- {}: archived {} rows from `{}`; remaining active rows: {}; cutoff: {}\n".format(
                 now.isoformat(timespec="seconds"),
                 len(month_rows),
                 ledger,
@@ -384,7 +381,7 @@ def _archive_ledger(
         )
         index_path = archive_dir / "INDEX.md"
         if not index_path.exists():
-            _write_text_no_follow(index_path, "# MemoryWiki Lifecycle Archive %s\n\n" % month)
+            _write_text_no_follow(index_path, f"# MemoryWiki Lifecycle Archive {month}\n\n")
         _append_text_no_follow(index_path, index_line, mode=0o644)
     _write_text_no_follow(
         ledger_path,
@@ -421,12 +418,12 @@ def _backup_status(
     base = Path(backup_root).expanduser()
     name = backup_name or re.sub(r"[^A-Za-z0-9_.-]", "-", root.name or scope)
     candidates = [
-        base / ("%s.git" % name),
-        base / ("%s.bundle" % name),
+        base / (f"{name}.git"),
+        base / (f"{name}.bundle"),
     ]
     if base.exists() and base.is_dir() and not base.is_symlink():
-        candidates.extend(sorted(base.glob("%s-*.bundle" % name)))
-        candidates.extend(sorted(base.glob("%s-*.git" % name)))
+        candidates.extend(sorted(base.glob(f"{name}-*.bundle")))
+        candidates.extend(sorted(base.glob(f"{name}-*.git")))
     existing = [path for path in candidates if path.exists() and not path.is_symlink()]
     latest = max((path.stat().st_mtime for path in existing), default=0)
     age_hours = None
@@ -512,7 +509,7 @@ def run_lifecycle(
             raise ValueError("--apply-scope and --apply-ledger must be provided together")
         matching_roots = [item for item in roots if item[0] == apply_scope]
         if not matching_roots:
-            raise ValueError("apply scope is not part of selected scope: %s" % apply_scope)
+            raise ValueError(f"apply scope is not part of selected scope: {apply_scope}")
         apply_payload = _archive_ledger(
             root=matching_roots[0][1],
             scope=apply_scope,
@@ -541,10 +538,10 @@ def render_human(payload: dict[str, Any]) -> str:
     lines = [
         "# MemoryWiki Memory Lifecycle",
         "",
-        "Status: %s" % payload["status"],
-        "Ledgers scanned: %s" % payload["ledger_count"],
-        "Proposals: %s" % payload["proposal_count"],
-        "Cutoff: %s" % payload["cutoff"],
+        "Status: {}".format(payload["status"]),
+        "Ledgers scanned: {}".format(payload["ledger_count"]),
+        "Proposals: {}".format(payload["proposal_count"]),
+        "Cutoff: {}".format(payload["cutoff"]),
         "",
     ]
     if payload["proposals"]:

@@ -31,7 +31,6 @@ from memorywiki_mcp.schema import (
 )
 from memorywiki_mcp.server import TOOL_NAMES, tool_specs
 
-
 SCHEMA = "memorywiki-mcp-contract-v1"
 INPUT_MODELS: dict[str, type[BaseModel]] = {
     "memorywiki_recall": RecallInput,
@@ -124,7 +123,7 @@ def build_contract(now: str | None = None) -> dict[str, Any]:
 
 def _write_json_no_follow(path: Path, payload: dict[str, Any]) -> None:
     if path.exists() and path.is_symlink():
-        raise ValueError("MCP contract output may not be a symlink: %s" % path)
+        raise ValueError(f"MCP contract output may not be a symlink: {path}")
     _assert_no_symlink_output_parent(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
@@ -143,11 +142,11 @@ def _assert_no_symlink_output_parent(path: Path) -> None:
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.exists() and cursor.is_symlink():
-        raise ValueError("MCP contract output parent may not be a symlink: %s" % cursor)
+        raise ValueError(f"MCP contract output parent may not be a symlink: {cursor}")
     for ancestor in [parent] + list(parent.parents):
         if ancestor.exists() and ancestor.is_symlink():
             raise ValueError(
-                "MCP contract output parent may not be below a symlink: %s" % ancestor
+                f"MCP contract output parent may not be below a symlink: {ancestor}"
             )
 
 
@@ -160,10 +159,10 @@ def write_contract(out: str | Path, now: str | None = None) -> Path:
 def verify_contract(path: str | Path) -> dict[str, Any]:
     contract_path = Path(path).expanduser()
     if not contract_path.exists() or contract_path.is_symlink() or not contract_path.is_file():
-        raise ValueError("MCP contract must be a real file: %s" % contract_path)
+        raise ValueError(f"MCP contract must be a real file: {contract_path}")
     payload = json.loads(contract_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError("MCP contract must be a JSON object: %s" % contract_path)
+        raise ValueError(f"MCP contract must be a JSON object: {contract_path}")
     current = build_contract(now=payload.get("generated_at"))
     stored_fingerprint = _fingerprint(payload)
     checks = [
@@ -196,11 +195,11 @@ def verify_contract(path: str | Path) -> dict[str, Any]:
 
 def render_human(payload: dict[str, Any]) -> str:
     if payload.get("schema") == SCHEMA:
-        return "# MemoryWiki MCP Contract\n\nTools: %s\nDigest: %s\n" % (
+        return "# MemoryWiki MCP Contract\n\nTools: {}\nDigest: {}\n".format(
             ", ".join(item["name"] for item in payload["tools"]),
             payload["contract_sha256"],
         )
-    lines = ["# MemoryWiki MCP Contract Verify", "", "Status: %s" % payload["status"], ""]
+    lines = ["# MemoryWiki MCP Contract Verify", "", "Status: {}".format(payload["status"]), ""]
     for check in payload["checks"]:
         lines.append("- [{status}] {target}".format(**check))
     return "\n".join(lines) + "\n"

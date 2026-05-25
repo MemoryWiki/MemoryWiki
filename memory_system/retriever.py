@@ -1,3 +1,5 @@
+"""Live Markdown/JSONL retriever for MemoryWiki memory roots."""
+
 from __future__ import annotations
 
 import json
@@ -6,7 +8,6 @@ from json import JSONDecodeError
 from memory_system.models import RetrievalHit, RetrievalResult
 from memory_system.paths import validate_episodic_date
 from memory_system.sanitizer import sanitize_text
-
 
 LEGACY_EPISODE_DEPRECATION_NOTE = (
     "Legacy root daily memory files (YYYY-MM-DD.md) are read-only compatibility "
@@ -61,13 +62,11 @@ class MemoryRetriever:
         valid_scopes = {"all", "global", "project"}
         if source not in valid_sources:
             raise ValueError(
-                "Unknown memory source %r. Expected one of: %s"
-                % (source, ", ".join(sorted(valid_sources)))
+                "Unknown memory source {!r}. Expected one of: {}".format(source, ", ".join(sorted(valid_sources)))
             )
         if scope not in valid_scopes:
             raise ValueError(
-                "Unknown memory scope %r. Expected one of: %s"
-                % (scope, ", ".join(sorted(valid_scopes)))
+                "Unknown memory scope {!r}. Expected one of: {}".format(scope, ", ".join(sorted(valid_scopes)))
             )
         hits = []
         needle = keyword.lower()
@@ -98,9 +97,8 @@ class MemoryRetriever:
                             RetrievalHit(
                                 scope=scope_name,
                                 source="history",
-                                identifier="history:%s" % line_number,
-                                excerpt="%s [%s] %s"
-                                % (
+                                identifier=f"history:{line_number}",
+                                excerpt="{} [{}] {}".format(
                                     row.get("ts", ""),
                                     row.get("role", ""),
                                     _center_excerpt(content, needle),

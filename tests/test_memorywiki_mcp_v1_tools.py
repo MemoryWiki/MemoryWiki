@@ -2,16 +2,14 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import stat
 
 import pytest
+from conftest import make_memory_store as _store
 
-from memory_system.models import SemanticMemory
-from memory_system.paths import MemoryScopePaths
-from memory_system.retrieval_index import build_and_write_index
-from memory_system.store import ScopedMemoryStore
 from agent_leases import acquire_lease
+from memory_system.models import SemanticMemory
+from memory_system.retrieval_index import build_and_write_index
 from memorywiki_mcp.schema import (
     CrystallizeInput,
     ForgetInput,
@@ -29,18 +27,11 @@ from memorywiki_mcp.tools import (
     memorywiki_write_session,
 )
 
-
-def _store(root: Path, scope: str = "project") -> ScopedMemoryStore:
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, scope=scope),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
+pytestmark = pytest.mark.usefixtures("allow_mcp_root_override")
 
 
 def test_memorywiki_write_session_requires_gate_and_writes_project_session(tmp_path, monkeypatch):
     project_root = tmp_path / "project"
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
 
     input_model = WriteSessionInput(
         project_root=str(project_root),
@@ -72,7 +63,6 @@ def test_memorywiki_read_memory_does_not_chmod_existing_root(tmp_path, monkeypat
         pytest.skip("POSIX mode regression only")
     project_root.chmod(0o755)
     before = stat.S_IMODE(project_root.stat().st_mode)
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
 
     output = memorywiki_read_memory(
         ReadMemoryInput(
@@ -91,7 +81,6 @@ def test_memorywiki_write_session_rejects_unsafe_audit_before_writing(tmp_path, 
     project_root.mkdir()
     outside = tmp_path / "outside-audit.jsonl"
     (project_root / "audit.jsonl").symlink_to(outside)
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     monkeypatch.setenv("MEMORY_MCP_WRITE_ENABLED", "true")
 
     with pytest.raises(ValueError, match="audit|symlink"):
@@ -109,7 +98,6 @@ def test_memorywiki_write_session_rejects_unsafe_audit_before_writing(tmp_path, 
 
 def test_memorywiki_global_write_requires_global_gate(tmp_path, monkeypatch):
     global_root = tmp_path / "global"
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     monkeypatch.setenv("MEMORY_MCP_WRITE_ENABLED", "true")
 
     input_model = WriteSessionInput(
@@ -131,7 +119,6 @@ def test_memorywiki_global_write_requires_global_gate(tmp_path, monkeypatch):
 
 def test_memorywiki_crystallize_defaults_to_dry_run_and_apply_is_gated(tmp_path, monkeypatch):
     project_root = tmp_path / "project"
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     input_model = CrystallizeInput(
         project_root=str(project_root),
         kind="semantic",
@@ -161,7 +148,6 @@ def test_memorywiki_crystallize_defaults_to_dry_run_and_apply_is_gated(tmp_path,
 
 def test_memorywiki_crystallize_dry_run_does_not_create_missing_root(tmp_path, monkeypatch):
     project_root = tmp_path / "missing-project"
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
 
     output = memorywiki_crystallize(
         CrystallizeInput(
@@ -179,7 +165,6 @@ def test_memorywiki_crystallize_dry_run_does_not_create_missing_root(tmp_path, m
 
 def test_memorywiki_crystallize_denied_apply_does_not_create_missing_root(tmp_path, monkeypatch):
     project_root = tmp_path / "missing-project"
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     monkeypatch.delenv("MEMORY_MCP_WRITE_ENABLED", raising=False)
 
     with pytest.raises(PermissionError, match="MEMORY_MCP_WRITE_ENABLED"):
@@ -202,7 +187,6 @@ def test_memorywiki_crystallize_rejects_unsafe_audit_before_writing(tmp_path, mo
     project_root.mkdir()
     outside = tmp_path / "outside-audit.jsonl"
     (project_root / "audit.jsonl").symlink_to(outside)
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     monkeypatch.setenv("MEMORY_MCP_WRITE_ENABLED", "true")
 
     with pytest.raises(ValueError, match="audit|symlink"):
@@ -223,7 +207,6 @@ def test_memorywiki_crystallize_rejects_unsafe_audit_before_writing(tmp_path, mo
 
 def test_global_mcp_write_tools_check_global_gate_before_creating_root(tmp_path, monkeypatch):
     global_root = tmp_path / "missing-global"
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     monkeypatch.setenv("MEMORY_MCP_WRITE_ENABLED", "true")
     monkeypatch.delenv("MEMORY_GLOBAL_WRITE_ENABLED", raising=False)
 
@@ -277,7 +260,6 @@ def test_memorywiki_ingest_source_is_dry_run_by_default_and_apply_writes_ledger(
     sources = project_root / "sources"
     sources.mkdir(parents=True)
     (sources / "note.md").write_text("Local source about MCP v1 source ingest.", encoding="utf-8")
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     input_model = IngestSourceInput(
         project_root=str(project_root),
         source="note.md",
@@ -312,7 +294,6 @@ def test_memorywiki_ingest_source_neutralizes_output_metadata(tmp_path, monkeypa
     sources = project_root / "sources"
     sources.mkdir(parents=True)
     (sources / "call-tool-shell.md").write_text("Source body.", encoding="utf-8")
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
 
     output = memorywiki_ingest_source(
         IngestSourceInput(
@@ -336,7 +317,6 @@ def test_memorywiki_ingest_source_rejects_unsafe_audit_before_writing(tmp_path, 
     (sources / "note.md").write_text("Safe source text.", encoding="utf-8")
     outside = tmp_path / "outside-audit.jsonl"
     (project_root / "audit.jsonl").symlink_to(outside)
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     monkeypatch.setenv("MEMORY_MCP_WRITE_ENABLED", "true")
 
     with pytest.raises(ValueError, match="audit|symlink"):
@@ -364,7 +344,6 @@ def test_memorywiki_ingest_source_rejects_symlinked_sources(tmp_path, monkeypatc
     outside = tmp_path / "outside.md"
     outside.write_text("outside source", encoding="utf-8")
     (sources / "link.md").symlink_to(outside)
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
 
     with pytest.raises(ValueError, match="symlink|Source must stay"):
         memorywiki_ingest_source(
@@ -397,7 +376,6 @@ def test_memorywiki_forget_dry_run_is_read_only_and_apply_deletes_with_audit(tmp
             updated_at="2026-05-15T10:00:00+08:00",
         )
     )
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     input_model = ForgetInput(
         project_root=str(project_root),
         kind="semantic",
@@ -435,7 +413,7 @@ def test_memorywiki_forget_apply_removes_forgotten_text_from_generated_indexes(
             id="forget-generated",
             scope="project",
             title="Forget Generated",
-            content="Forget generated MCP sidecars %s." % sentinel,
+            content=f"Forget generated MCP sidecars {sentinel}.",
             concepts=["mcp", "forget"],
             source_refs=[],
             confidence=0.5,
@@ -447,7 +425,6 @@ def test_memorywiki_forget_apply_removes_forgotten_text_from_generated_indexes(
     )
     store.refresh_index()
     build_and_write_index(store, "project")
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     monkeypatch.setenv("MEMORY_MCP_WRITE_ENABLED", "true")
 
     output = memorywiki_forget(
@@ -486,7 +463,6 @@ def test_memorywiki_forget_rejects_unsafe_audit_before_deleting(tmp_path, monkey
     )
     outside = tmp_path / "outside-audit.jsonl"
     (project_root / "audit.jsonl").symlink_to(outside)
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     monkeypatch.setenv("MEMORY_MCP_WRITE_ENABLED", "true")
 
     with pytest.raises(ValueError, match="audit|symlink"):
@@ -506,7 +482,6 @@ def test_memorywiki_forget_rejects_unsafe_audit_before_deleting(tmp_path, monkey
 
 def test_memorywiki_forget_dry_run_does_not_create_missing_root(tmp_path, monkeypatch):
     project_root = tmp_path / "missing-project"
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
 
     output = memorywiki_forget(
         ForgetInput(
@@ -551,7 +526,6 @@ def test_memorywiki_index_maintain_write_respects_existing_retrieval_lease(tmp_p
         conflicts_on="kind",
         now="2026-05-15T10:00:00+08:00",
     )
-    monkeypatch.setenv("MEMORY_MCP_ALLOW_ROOT_OVERRIDE", "true")
     monkeypatch.setenv("MEMORY_MCP_WRITE_ENABLED", "true")
 
     with pytest.raises(ValueError, match="Active lease conflict"):

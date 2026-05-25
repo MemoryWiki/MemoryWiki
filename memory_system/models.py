@@ -1,3 +1,5 @@
+"""Dataclasses that define MemoryWiki records, memories, and result payloads."""
+
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 

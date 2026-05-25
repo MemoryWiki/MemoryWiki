@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
+import re
+import sys
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-import hashlib
-import json
 from pathlib import Path
-import re
-import sys
 
 from memory_system.models import ProceduralMemory, SemanticMemory, SourceRef
-from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
-
+from memory_system.store_guard import build_existing_scoped_store
 
 DEFAULT_HOT_FILE_MAX_BYTES = 250_000
 DEFAULT_LOW_CONFIDENCE = 0.4
@@ -28,19 +27,6 @@ class HealthIssue:
     severity: str
     target: str
     message: str
-
-
-def _safe_store(root: str | Path, scope: str) -> ScopedMemoryStore | None:
-    path = Path(root).expanduser()
-    if not path.exists():
-        return None
-    if path.is_symlink() or not path.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % path)
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(path, scope),
-        sanitize_on_write=True,
-        secure_permissions=True,
-    )
 
 
 def _issue(scope: str, code: str, severity: str, target: str, message: str) -> HealthIssue:
@@ -62,7 +48,7 @@ def _item_kind(item: SemanticMemory | ProceduralMemory) -> str:
 
 
 def _item_target(item: SemanticMemory | ProceduralMemory) -> str:
-    return "%s/%s.md" % (_item_kind(item), item.id)
+    return f"{_item_kind(item)}/{item.id}.md"
 
 
 def _normal_key(text: str) -> str:
@@ -146,7 +132,7 @@ def _check_hot_files(
                             "hot-file-large",
                             "warn",
                             path.name,
-                            "%s is %s bytes, above %s" % (path.name, size, max_bytes),
+                            f"{path.name} is {size} bytes, above {max_bytes}",
                         )
                     )
         except OSError:
@@ -171,7 +157,7 @@ def _check_source_refs(
                     "source-ref-outside",
                     "warn",
                     target,
-                    "Source ref is outside sources/: %s" % ref.path,
+                    f"Source ref is outside sources/: {ref.path}",
                 )
             )
             continue
@@ -182,7 +168,7 @@ def _check_source_refs(
                     "source-ref-missing",
                     "warn",
                     target,
-                    "Source ref is missing: %s" % ref.path,
+                    f"Source ref is missing: {ref.path}",
                 )
             )
             continue
@@ -199,7 +185,7 @@ def _check_source_refs(
                         "source-ref-tampered",
                         "warn",
                         target,
-                        "Source hash does not match ref %s for %s" % (identifier, ref.path),
+                        f"Source hash does not match ref {identifier} for {ref.path}",
                     )
                 )
 
@@ -225,8 +211,7 @@ def _check_memory_items(
                     "low-confidence-memory",
                     "warn",
                     target,
-                    "confidence %.2f / strength %.2f below %.2f"
-                    % (item.confidence, item.strength, low_confidence),
+                    f"confidence {item.confidence:.2f} / strength {item.strength:.2f} below {low_confidence:.2f}",
                 )
             )
         updated = _parse_datetime(item.updated_at)
@@ -237,7 +222,7 @@ def _check_memory_items(
                     "stale-memory",
                     "info",
                     target,
-                    "updated_at is older than %s days" % stale_days,
+                    f"updated_at is older than {stale_days} days",
                 )
             )
         if isinstance(item, SemanticMemory):
@@ -254,11 +239,11 @@ def _check_memory_items(
                     )
                 )
             duplicate_groups[
-                "%s|%s" % (_normal_key(item.title), _normal_key(item.content))
+                f"{_normal_key(item.title)}|{_normal_key(item.content)}"
             ].append(target)
         else:
             duplicate_groups[
-                "%s|%s" % (_normal_key(item.title), _normal_key(item.trigger))
+                f"{_normal_key(item.title)}|{_normal_key(item.trigger)}"
             ].append(target)
         _check_source_refs(store, item, issues=issues)
 
@@ -285,7 +270,7 @@ def _check_root(
     now: datetime,
 ) -> dict:
     issues: list[HealthIssue] = []
-    store = _safe_store(root, scope)
+    store = build_existing_scoped_store(root, scope=scope)
     if store is None:
         return {
             "scope": scope,
@@ -351,12 +336,12 @@ def render_human(payload: dict) -> str:
     lines = [
         "# MemoryWiki Memory Health",
         "",
-        "Status: %s" % payload["status"],
-        "Issues: %s" % payload["issue_count"],
+        "Status: {}".format(payload["status"]),
+        "Issues: {}".format(payload["issue_count"]),
         "",
     ]
     for root in payload["roots"]:
-        lines.append("- [%s] %s: %s" % (root["status"], root["scope"], root["root"]))
+        lines.append("- [{}] {}: {}".format(root["status"], root["scope"], root["root"]))
     if payload["issues"]:
         lines.append("")
         for issue in payload["issues"]:

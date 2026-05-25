@@ -1,38 +1,18 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
 import json
-from pathlib import Path
 import sys
+from datetime import datetime
+from pathlib import Path
 
 from memory_system.models import ProceduralMemory, SemanticMemory, SourceRef
-from memory_system.paths import MemoryScopePaths
 from memory_system.sanitizer import sanitize_text
-from memory_system.store import ScopedMemoryStore
+from memory_system.store_guard import build_scoped_store
 
 
 def _now() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
-
-
-def _safe_store(root: str | Path) -> ScopedMemoryStore:
-    path = Path(root).expanduser()
-    if path.exists() and (path.is_symlink() or not path.is_dir()):
-        raise ValueError("Memory root must be a real directory: %s" % path)
-    cursor = path
-    while not cursor.exists() and cursor != cursor.parent:
-        cursor = cursor.parent
-    if cursor.is_symlink():
-        raise ValueError("Memory root may not be below a symlink: %s" % cursor)
-    for ancestor in cursor.parents:
-        if ancestor.is_symlink():
-            raise ValueError("Memory root may not be below a symlink: %s" % ancestor)
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(path, scope="project"),
-        sanitize_on_write=True,
-        secure_permissions=True,
-    )
 
 
 def _answer_from_args(args) -> str:
@@ -59,7 +39,7 @@ def _source_refs(args) -> list[SourceRef]:
 
 
 def crystallize(args) -> dict:
-    store = _safe_store(args.root)
+    store = build_scoped_store(args.root, scope="project")
     answer = _answer_from_args(args)
     timestamp = args.now or _now()
     refs = _source_refs(args)
@@ -67,7 +47,7 @@ def crystallize(args) -> dict:
     if args.kind == "semantic":
         existing = store.read_semantic_memory(args.id)
         if existing is not None and not args.replace:
-            raise ValueError("semantic memory already exists; use --replace: %s" % args.id)
+            raise ValueError(f"semantic memory already exists; use --replace: {args.id}")
         item = SemanticMemory(
             id=args.id,
             scope="project",
@@ -82,7 +62,7 @@ def crystallize(args) -> dict:
             updated_at=timestamp,
             update_log=(
                 list(existing.update_log)
-                + ["%s Update: Replaced from crystallized answer." % timestamp]
+                + [f"{timestamp} Update: Replaced from crystallized answer."]
                 if existing
                 else []
             ),
@@ -92,7 +72,7 @@ def crystallize(args) -> dict:
     else:
         existing = store.read_procedural_memory(args.id)
         if existing is not None and not args.replace:
-            raise ValueError("procedure already exists; use --replace: %s" % args.id)
+            raise ValueError(f"procedure already exists; use --replace: {args.id}")
         steps = args.step or [line.strip("- ").strip() for line in answer.splitlines() if line.strip()]
         item = ProceduralMemory(
             id=args.id,
@@ -152,7 +132,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.format == "json":
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
-        print("Crystallized %s/%s -> %s" % (payload["kind"], payload["id"], payload["affected_path"]))
+        print("Crystallized {}/{} -> {}".format(payload["kind"], payload["id"], payload["affected_path"]))
     return 0
 
 

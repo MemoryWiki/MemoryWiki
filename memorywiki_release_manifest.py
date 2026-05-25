@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
-
 
 SCHEMA = "memorywiki-release-manifest-v1"
 SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9_.-]+$")
@@ -37,22 +36,22 @@ def _now() -> str:
 def _safe_dir(path: str | Path, label: str) -> Path:
     resolved = Path(path).expanduser()
     if not resolved.exists() or resolved.is_symlink() or not resolved.is_dir():
-        raise ValueError("%s must be a real directory: %s" % (label, resolved))
+        raise ValueError(f"{label} must be a real directory: {resolved}")
     for ancestor in resolved.parents:
         if ancestor.is_symlink():
-            raise ValueError("%s may not be below a symlink: %s" % (label, ancestor))
+            raise ValueError(f"{label} may not be below a symlink: {ancestor}")
     return resolved.resolve()
 
 
 def _safe_file(path: str | Path, label: str) -> Path:
     resolved = Path(path).expanduser()
     if not resolved.exists() or resolved.is_symlink() or not resolved.is_file():
-        raise ValueError("%s must be a real file and not a symlink: %s" % (label, resolved))
+        raise ValueError(f"{label} must be a real file and not a symlink: {resolved}")
     for ancestor in resolved.parents:
         if ancestor.is_symlink():
-            raise ValueError("%s may not be below a symlink: %s" % (label, ancestor))
+            raise ValueError(f"{label} may not be below a symlink: {ancestor}")
     if resolved.stat().st_size > MAX_HASH_BYTES:
-        raise ValueError("%s exceeds safe hash limit: %s" % (label, resolved))
+        raise ValueError(f"{label} exceeds safe hash limit: {resolved}")
     return resolved.resolve()
 
 
@@ -78,12 +77,12 @@ def _safe_repo_relative_path(repo: Path, rel: str, label: str) -> Path:
         return repo
     target = Path(rel)
     if target.is_absolute() or any(part in {"", ".", ".."} for part in target.parts):
-        raise ValueError("%s must be a safe repo-relative path: %s" % (label, rel))
+        raise ValueError(f"{label} must be a safe repo-relative path: {rel}")
     resolved = (repo / target).resolve(strict=False)
     try:
         resolved.relative_to(repo.resolve())
     except ValueError:
-        raise ValueError("%s escapes repo root: %s" % (label, rel))
+        raise ValueError(f"{label} escapes repo root: {rel}")
     return repo / target
 
 
@@ -144,7 +143,7 @@ def _iter_memorywiki_files(repo: Path, memorywiki_root: Path) -> list[dict[str, 
     try:
         memorywiki_root.relative_to(repo)
     except ValueError:
-        raise ValueError("MemoryWiki root must stay below repo root: %s" % memorywiki_root)
+        raise ValueError(f"MemoryWiki root must stay below repo root: {memorywiki_root}")
     rows: list[dict[str, Any]] = []
     for current, dirs, files in os.walk(memorywiki_root):
         current_path = Path(current)
@@ -154,7 +153,7 @@ def _iter_memorywiki_files(repo: Path, memorywiki_root: Path) -> list[dict[str, 
             if path.suffix in SKIP_SUFFIXES or path.is_symlink() or not path.is_file():
                 continue
             if path.stat().st_size > MAX_HASH_BYTES:
-                raise ValueError("MemoryWiki file exceeds safe hash limit: %s" % path)
+                raise ValueError(f"MemoryWiki file exceeds safe hash limit: {path}")
             relative = path.relative_to(repo).as_posix()
             rows.append(
                 {
@@ -213,11 +212,11 @@ def _latest_backup_bundle(backup_root: str | Path | None, backup_name: str) -> P
     name = _safe_name(backup_name)
     candidates = [
         path
-        for path in list(root.glob("%s-*.bundle" % name)) + [root / ("%s.bundle" % name)]
+        for path in list(root.glob(f"{name}-*.bundle")) + [root / (f"{name}.bundle")]
         if path.exists() and path.is_file() and not path.is_symlink()
     ]
     if not candidates:
-        raise ValueError("No backup bundle found for %s under %s" % (name, root))
+        raise ValueError(f"No backup bundle found for {name} under {root}")
     return max(candidates, key=lambda item: item.stat().st_mtime).resolve()
 
 
@@ -228,9 +227,9 @@ def _read_release_check(path: str | Path | None) -> dict[str, Any] | None:
     try:
         payload = json.loads(safe.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise ValueError("Release check JSON is invalid: %s" % safe) from exc
+        raise ValueError(f"Release check JSON is invalid: {safe}") from exc
     if not isinstance(payload, dict):
-        raise ValueError("Release check JSON must be an object: %s" % safe)
+        raise ValueError(f"Release check JSON must be an object: {safe}")
     return payload
 
 
@@ -378,10 +377,10 @@ def _compare_retrieval_baseline(
         previous_rank = previous_case.get("rank")
         current_rank = case.get("rank")
         if isinstance(previous_rank, int) and isinstance(current_rank, int) and current_rank > previous_rank:
-            reasons.append("rank worsened from %s to %s" % (previous_rank, current_rank))
+            reasons.append(f"rank worsened from {previous_rank} to {current_rank}")
         min_rank = case.get("min_rank")
         if isinstance(min_rank, int) and isinstance(current_rank, int) and current_rank > min_rank:
-            reasons.append("rank %s exceeds min_rank %s" % (current_rank, min_rank))
+            reasons.append(f"rank {current_rank} exceeds min_rank {min_rank}")
         if reasons:
             regressions.append(
                 {
@@ -471,7 +470,7 @@ def build_manifest(
 
 def _write_json_no_follow(path: Path, payload: dict[str, Any]) -> None:
     if path.exists() and path.is_symlink():
-        raise ValueError("Manifest output may not be a symlink: %s" % path)
+        raise ValueError(f"Manifest output may not be a symlink: {path}")
     _assert_no_symlink_output_parent(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
@@ -490,10 +489,10 @@ def _assert_no_symlink_output_parent(path: Path) -> None:
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.exists() and cursor.is_symlink():
-        raise ValueError("Manifest output parent may not be a symlink: %s" % cursor)
+        raise ValueError(f"Manifest output parent may not be a symlink: {cursor}")
     for ancestor in [parent] + list(parent.parents):
         if ancestor.exists() and ancestor.is_symlink():
-            raise ValueError("Manifest output parent may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"Manifest output parent may not be below a symlink: {ancestor}")
 
 
 def write_manifest(
@@ -525,7 +524,7 @@ def write_manifest(
         now=now,
     )
     if path.exists() and path.is_symlink():
-        raise ValueError("Manifest output may not be a symlink: %s" % path)
+        raise ValueError(f"Manifest output may not be a symlink: {path}")
     _write_json_no_follow(path, manifest)
     return path
 
@@ -534,7 +533,7 @@ def verify_manifest(manifest_path: str | Path) -> dict[str, Any]:
     path = _safe_file(manifest_path, "Manifest")
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict) or payload.get("schema") != SCHEMA:
-        raise ValueError("Unsupported manifest schema: %s" % path)
+        raise ValueError(f"Unsupported manifest schema: {path}")
     checks: list[dict[str, Any]] = []
     expected_files = payload.get("memorywiki", {}).get("files", [])
     actual_files = []
@@ -607,7 +606,7 @@ def verify_manifest(manifest_path: str | Path) -> dict[str, Any]:
             checks.append({"target": label, "status": "missing"})
             continue
         try:
-            safe_artifact = _safe_file(artifact_path, "Manifest artifact %s" % label)
+            safe_artifact = _safe_file(artifact_path, f"Manifest artifact {label}")
         except ValueError as exc:
             checks.append({"target": label, "status": "unsafe", "error": str(exc)})
             continue
@@ -638,7 +637,7 @@ def _resolve_manifest_artifact_path(artifact: dict[str, Any], repo: Path, manife
         raise ValueError("Manifest artifact path is empty")
     if artifact.get("path_kind") == "external-basename":
         if Path(public_path).name != public_path:
-            raise ValueError("External artifact path must be a basename: %s" % public_path)
+            raise ValueError(f"External artifact path must be a basename: {public_path}")
         return manifest_path.parent / public_path
     artifact_path = Path(public_path).expanduser()
     if artifact_path.is_absolute():
@@ -709,7 +708,7 @@ def render_human(payload: dict[str, Any]) -> str:
             count=payload["memorywiki"]["file_count"],
             digest=payload["memorywiki"]["files_sha256"],
         )
-    lines = ["# MemoryWiki Release Manifest Verify", "", "Status: %s" % payload["status"], ""]
+    lines = ["# MemoryWiki Release Manifest Verify", "", "Status: {}".format(payload["status"]), ""]
     for check in payload["checks"]:
         lines.append("- [{status}] {target}".format(**check))
     return "\n".join(lines) + "\n"

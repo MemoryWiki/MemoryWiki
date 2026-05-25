@@ -1,5 +1,5 @@
-import json
 import hashlib
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -9,7 +9,6 @@ from memory_system.models import SemanticMemory
 from memory_system.paths import MemoryScopePaths
 from memory_system.retrieval_index import local_embedding_for_index, term_counts_for_index
 from memory_system.store import ScopedMemoryStore
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

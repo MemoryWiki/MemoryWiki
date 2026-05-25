@@ -3,14 +3,13 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from agent_leases import acquire_lease, release_lease
 from memory_system.paths import MemoryScopePaths
 from memory_system.retrieval_index import build_and_write_index, load_index
 from memory_system.store import ScopedMemoryStore
-
 
 LEASE_KIND = "retrieval-index"
 DEFAULT_LEASE_TTL_SECONDS = 3600
@@ -35,7 +34,7 @@ def _missing_root_report(root: Path, scope: str) -> dict:
         "needs_rebuild": False,
         "rebuilt": False,
         "indexed": 0,
-        "warnings": ["Memory root does not exist: %s" % root],
+        "warnings": [f"Memory root does not exist: {root}"],
         "lease_id": None,
     }
 
@@ -70,7 +69,7 @@ def inspect_scope_index(root: str | Path, scope: str) -> dict:
     if not memory_root.exists():
         return _missing_root_report(memory_root, scope)
     if memory_root.is_symlink() or not memory_root.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % memory_root)
+        raise ValueError(f"Memory root must be a real directory: {memory_root}")
     load_result = load_index(memory_root, scope)
     status = _classify_status(load_result.warnings, load_result.fresh)
     return {
@@ -102,7 +101,7 @@ def rebuild_scope_index(
     lease = acquire_lease(
         root=memory_root,
         agent=agent,
-        task="rebuild %s retrieval index" % scope,
+        task=f"rebuild {scope} retrieval index",
         kind=LEASE_KIND,
         ttl_seconds=ttl_seconds,
         pid=os.getpid(),
@@ -181,15 +180,14 @@ def render_human(payload: dict) -> str:
         "# MemoryWiki Retrieval Index Maintenance",
         "",
         "Mode: %s" % ("dry-run" if payload["dry_run"] else "write"),
-        "Scope: %s" % payload["scope"],
+        "Scope: {}".format(payload["scope"]),
         "Rebuild needed: %s" % ("yes" if payload["rebuild_needed"] else "no"),
         "Rebuilt: %s" % ("yes" if payload["rebuilt"] else "no"),
         "",
     ]
     for item in payload["roots"]:
         lines.append(
-            "- [%s] %s: %s%s"
-            % (
+            "- [{}] {}: {}{}".format(
                 item["scope"],
                 item["status"],
                 item["index_path"],
@@ -197,7 +195,7 @@ def render_human(payload: dict) -> str:
             )
         )
         for warning in item["warnings"]:
-            lines.append("  warning: %s" % warning)
+            lines.append(f"  warning: {warning}")
     return "\n".join(lines) + "\n"
 
 

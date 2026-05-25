@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
 import hashlib
 import json
 import os
-from pathlib import Path
 import re
 import sys
+from datetime import datetime
+from pathlib import Path
 from typing import Iterable
 
-from memory_system.paths import MemoryScopePaths
 from memory_system.sanitizer import sanitize_text
 from memory_system.store import ScopedMemoryStore
-
+from memory_system.store_guard import build_scoped_store
 
 QUEUE_NAME = "crystallize-candidates.jsonl"
 MAX_TEXT_CHARS = 900
@@ -21,25 +20,6 @@ MAX_TEXT_CHARS = 900
 
 def _now() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
-
-
-def _safe_store(root: str | Path) -> ScopedMemoryStore:
-    path = Path(root).expanduser()
-    if path.exists() and (path.is_symlink() or not path.is_dir()):
-        raise ValueError("Memory root must be a real directory: %s" % path)
-    cursor = path
-    while not cursor.exists() and cursor != cursor.parent:
-        cursor = cursor.parent
-    if cursor.exists() and cursor.is_symlink():
-        raise ValueError("Memory root may not be below a symlink: %s" % cursor)
-    for parent in cursor.parents:
-        if parent.is_symlink():
-            raise ValueError("Memory root may not be below a symlink: %s" % parent)
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(path, "project"),
-        sanitize_on_write=True,
-        secure_permissions=True,
-    )
 
 
 def _slug(text: str) -> str:
@@ -50,7 +30,7 @@ def _slug(text: str) -> str:
 
 
 def _candidate_id(kind: str, text: str) -> str:
-    return "%s-%s" % (kind, _slug(text)[:64])
+    return f"{kind}-{_slug(text)[:64]}"
 
 
 def _sentences(texts: Iterable[str]) -> Iterable[str]:
@@ -116,7 +96,7 @@ def _session_candidates(store: ScopedMemoryStore, limit: int) -> list[dict]:
                     "confidence": 0.55,
                     "strength": 0.5,
                     "source_kind": "session",
-                    "source_path": "sessions/%s.md" % session.id,
+                    "source_path": f"sessions/{session.id}.md",
                     "source_id": session.id,
                     "reason": "candidate extracted from stable-looking session text",
                 }
@@ -143,7 +123,7 @@ def _episode_candidates(store: ScopedMemoryStore, limit: int) -> list[dict]:
                     "confidence": 0.5,
                     "strength": 0.45,
                     "source_kind": "episode",
-                    "source_path": "episodes/%s.md" % date_text,
+                    "source_path": f"episodes/{date_text}.md",
                     "source_id": date_text,
                     "reason": "candidate extracted from stable-looking episode text",
                 }
@@ -154,11 +134,11 @@ def _episode_candidates(store: ScopedMemoryStore, limit: int) -> list[dict]:
 def _append_queue(store: ScopedMemoryStore, rows: list[dict]) -> Path:
     pending = store.paths.pending_dir
     if pending.exists() and pending.is_symlink():
-        raise ValueError("_pending may not be a symlink: %s" % pending)
+        raise ValueError(f"_pending may not be a symlink: {pending}")
     pending.mkdir(parents=True, exist_ok=True)
     path = pending / QUEUE_NAME
     if path.exists() and path.is_symlink():
-        raise ValueError("candidate queue may not be a symlink: %s" % path)
+        raise ValueError(f"candidate queue may not be a symlink: {path}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -188,7 +168,7 @@ def propose_candidates(
             "queue_path": None,
             "candidates": [],
         }
-    store = _safe_store(root)
+    store = build_scoped_store(root, scope="project")
     timestamp = now or _now()
     candidates = (_session_candidates(store, limit=limit) + _episode_candidates(store, limit=limit))[:limit]
     for row in candidates:
@@ -210,8 +190,8 @@ def render_human(payload: dict) -> str:
     lines = [
         "# MemoryWiki Crystallize Candidates",
         "",
-        "Status: %s" % payload["status"],
-        "Candidates: %s" % payload["candidate_count"],
+        "Status: {}".format(payload["status"]),
+        "Candidates: {}".format(payload["candidate_count"]),
         "Written: %s" % ("yes" if payload["written"] else "no"),
         "",
     ]

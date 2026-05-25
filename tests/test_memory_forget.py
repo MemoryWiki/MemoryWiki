@@ -4,20 +4,9 @@ import sys
 from pathlib import Path
 
 from memory_system.models import SemanticMemory
-from memory_system.paths import MemoryScopePaths
 from memory_system.retrieval_index import build_and_write_index
-from memory_system.store import ScopedMemoryStore
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _store(root):
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, scope="project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
 
 
 def _write_semantic(store, memory_id="old-memory"):
@@ -38,9 +27,9 @@ def _write_semantic(store, memory_id="old-memory"):
     )
 
 
-def test_forget_is_dry_run_by_default_and_keeps_target(tmp_path):
+def test_forget_is_dry_run_by_default_and_keeps_target(tmp_path, memory_store_factory):
     project_root = tmp_path / "project"
-    store = _store(project_root)
+    store = memory_store_factory(project_root)
     _write_semantic(store)
 
     result = subprocess.run(
@@ -106,9 +95,9 @@ def test_forget_dry_run_does_not_create_missing_root(tmp_path):
     assert not project_root.exists()
 
 
-def test_forget_apply_requires_reason(tmp_path):
+def test_forget_apply_requires_reason(tmp_path, memory_store_factory):
     project_root = tmp_path / "project"
-    store = _store(project_root)
+    store = memory_store_factory(project_root)
     _write_semantic(store)
 
     result = subprocess.run(
@@ -134,9 +123,9 @@ def test_forget_apply_requires_reason(tmp_path):
     assert store.read_semantic_memory("old-memory") is not None
 
 
-def test_forget_apply_deletes_target_and_records_audit(tmp_path):
+def test_forget_apply_deletes_target_and_records_audit(tmp_path, memory_store_factory):
     project_root = tmp_path / "project"
-    store = _store(project_root)
+    store = memory_store_factory(project_root)
     _write_semantic(store)
 
     result = subprocess.run(
@@ -172,13 +161,15 @@ def test_forget_apply_deletes_target_and_records_audit(tmp_path):
     assert audit[-1].dry_run is False
 
 
-def test_forget_apply_removes_forgotten_text_from_generated_indexes(tmp_path):
+def test_forget_apply_removes_forgotten_text_from_generated_indexes(
+    tmp_path, memory_store_factory
+):
     project_root = tmp_path / "project"
-    store = _store(project_root)
+    store = memory_store_factory(project_root)
     sentinel = "SYNTHETIC_FORGET_SENTINEL_12345"
     _write_semantic(store, memory_id="forgotten-secret")
     item = store.read_semantic_memory("forgotten-secret")
-    item.content = "Forget generated sidecars %s." % sentinel
+    item.content = f"Forget generated sidecars {sentinel}."
     store.write_semantic_memory(item)
     store.refresh_index()
     build_and_write_index(store, "project")
@@ -214,9 +205,9 @@ def test_forget_apply_removes_forgotten_text_from_generated_indexes(tmp_path):
             assert sentinel not in path.read_text(encoding="utf-8")
 
 
-def test_forget_rejects_path_traversal_id(tmp_path):
+def test_forget_rejects_path_traversal_id(tmp_path, memory_store_factory):
     project_root = tmp_path / "project"
-    _store(project_root)
+    memory_store_factory(project_root)
 
     result = subprocess.run(
         [

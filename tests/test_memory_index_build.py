@@ -4,24 +4,13 @@ import sys
 from pathlib import Path
 
 from memory_system.models import SemanticMemory, SessionFile
-from memory_system.paths import MemoryScopePaths
-from memory_system.store import ScopedMemoryStore
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
-def _store(root, scope="project"):
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, scope=scope),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
-
-
-def test_memory_index_build_writes_local_retrieval_index(tmp_path):
+def test_memory_index_build_writes_local_retrieval_index(tmp_path, memory_store_factory):
     project_root = tmp_path / "project"
-    store = _store(project_root)
+    store = memory_store_factory(project_root)
     store.write_semantic_memory(
         SemanticMemory(
             id="hybrid-retrieval",
@@ -87,9 +76,11 @@ def test_memory_index_build_writes_local_retrieval_index(tmp_path):
     assert semantic["embedding_vector"]
 
 
-def test_memory_index_build_tokenizes_chinese_terms_and_update_log(tmp_path):
+def test_memory_index_build_tokenizes_chinese_terms_and_update_log(
+    tmp_path, memory_store_factory
+):
     project_root = tmp_path / "project"
-    store = _store(project_root)
+    store = memory_store_factory(project_root)
     store.write_semantic_memory(
         SemanticMemory(
             id="ai-power-scenarios",
@@ -138,9 +129,9 @@ def test_memory_index_build_tokenizes_chinese_terms_and_update_log(tmp_path):
     assert "Conflict:" in semantic["conflict_entries"][0]
 
 
-def test_memory_index_build_rejects_symlinked_index_file(tmp_path):
+def test_memory_index_build_rejects_symlinked_index_file(tmp_path, memory_store_factory):
     project_root = tmp_path / "project"
-    store = _store(project_root)
+    store = memory_store_factory(project_root)
     store.write_semantic_memory(
         SemanticMemory(
             id="safe-index",

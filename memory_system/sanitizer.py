@@ -1,5 +1,6 @@
-import re
+"""Sanitizers that neutralize secrets and instruction-shaped memory text."""
 
+import re
 
 PATTERNS = [
     (

@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass, field
 import json
-from pathlib import Path
 import os
 import subprocess
 import sys
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from memory_index_maintain import maintain_indexes
 from memorywiki_cross_project_install import install_cross_project_memory
 from memorywiki_mcp_doctor import run_doctor
 from retrieval_golden_eval import RetrievalCase, run_golden_eval
-
 
 DEFAULT_PROJECTS: list[dict[str, Any]] = []
 
@@ -66,8 +65,7 @@ def _case_coverage(target: ProjectTarget) -> dict[str, Any]:
             "case_count": case_count,
             "required_cases_min": target.required_cases_min,
             "required_cases_max": target.required_cases_max,
-            "message": "project has %s golden cases, below minimum %s"
-            % (case_count, target.required_cases_min),
+            "message": f"project has {case_count} golden cases, below minimum {target.required_cases_min}",
         }
     if target.required_cases_max > 0 and case_count > target.required_cases_max:
         return {
@@ -75,8 +73,7 @@ def _case_coverage(target: ProjectTarget) -> dict[str, Any]:
             "case_count": case_count,
             "required_cases_min": target.required_cases_min,
             "required_cases_max": target.required_cases_max,
-            "message": "project has %s golden cases, above maximum %s"
-            % (case_count, target.required_cases_max),
+            "message": f"project has {case_count} golden cases, above maximum {target.required_cases_max}",
         }
     return {
         "status": "ok",
@@ -259,7 +256,7 @@ def render_human(payload: dict[str, Any]) -> str:
     lines = [
         "# MemoryWiki Project Matrix",
         "",
-        "Status: %s" % payload["status"],
+        "Status: {}".format(payload["status"]),
         "Install: %s" % ("yes" if payload["install"] else "no"),
         "Write indexes: %s" % ("yes" if payload["write_indexes"] else "no"),
         "MCP smoke: %s" % ("yes" if payload.get("smoke") else "no"),
@@ -272,7 +269,7 @@ def render_human(payload: dict[str, Any]) -> str:
         if row.get("index", {}).get("roots"):
             index_status = row["index"]["roots"][0]["status"]
         golden = row.get("golden_eval", {})
-        golden_text = "%s/%s" % (golden.get("passed", 0), golden.get("total", 0))
+        golden_text = "{}/{}".format(golden.get("passed", 0), golden.get("total", 0))
         lines.append(
             "| {name} | {status} | {doctor} | {index} | {golden} | {smoke} |".format(
                 name=row["name"],
@@ -285,11 +282,11 @@ def render_human(payload: dict[str, Any]) -> str:
         )
         if row.get("error"):
             lines.append("")
-            lines.append("Error for %s: %s" % (row["name"], row["error"]))
+            lines.append("Error for {}: {}".format(row["name"], row["error"]))
         coverage = row.get("case_coverage", {})
         if coverage.get("status") == "warn":
             lines.append("")
-            lines.append("Golden coverage for %s: %s" % (row["name"], coverage.get("message", "")))
+            lines.append("Golden coverage for {}: {}".format(row["name"], coverage.get("message", "")))
     return "\n".join(lines) + "\n"
 
 

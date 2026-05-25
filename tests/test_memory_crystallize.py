@@ -5,7 +5,6 @@ from pathlib import Path
 from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

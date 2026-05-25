@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import argparse
-from html import escape
 import importlib.util
 import json
-from pathlib import Path
 import shlex
 import sys
+from html import escape
+from pathlib import Path
 from typing import Any
 
 from memory_review import golden_candidate_action_guidance
@@ -19,19 +19,19 @@ from retrieval_golden_eval import load_cases
 def _safe_file(path: str | Path, *, label: str, must_exist: bool = True) -> Path:
     candidate = Path(path).expanduser()
     if candidate.is_symlink():
-        raise ValueError("%s must be a real file: %s" % (label, candidate))
+        raise ValueError(f"{label} must be a real file: {candidate}")
     if must_exist and not candidate.exists():
-        raise ValueError("%s is missing: %s" % (label, candidate))
+        raise ValueError(f"{label} is missing: {candidate}")
     if candidate.exists() and not candidate.is_file():
-        raise ValueError("%s must be a real file: %s" % (label, candidate))
+        raise ValueError(f"{label} must be a real file: {candidate}")
     cursor = candidate.parent
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.exists() and cursor.is_symlink():
-        raise ValueError("%s may not be below a symlink: %s" % (label, cursor))
+        raise ValueError(f"{label} may not be below a symlink: {cursor}")
     for parent in cursor.parents:
         if parent.is_symlink():
-            raise ValueError("%s may not be below a symlink: %s" % (label, parent))
+            raise ValueError(f"{label} may not be below a symlink: {parent}")
     return candidate
 
 
@@ -43,7 +43,7 @@ def _read_release_baseline(path: str | Path | None) -> dict[str, Any]:
         return {"status": "missing", "path": str(candidate), "comparison": {}, "current": {}}
     payload = json.loads(candidate.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
-        raise ValueError("Release manifest must be a JSON object: %s" % candidate)
+        raise ValueError(f"Release manifest must be a JSON object: {candidate}")
     baseline = payload.get("retrieval_baseline", {})
     if not isinstance(baseline, dict):
         baseline = {}
@@ -143,8 +143,7 @@ def _quality_recommendations(
                 category="memory-ops",
                 severity="warn" if health.get("status") != "fail" else "fail",
                 title="Review memory health issues",
-                summary="%s memory health issues need review before applying repairs."
-                % health.get("issue_count", 0),
+                summary="{} memory health issues need review before applying repairs.".format(health.get("issue_count", 0)),
                 command=_command(
                     "memory_review.py",
                     "--project-root",
@@ -166,8 +165,7 @@ def _quality_recommendations(
                 category="memory-ops",
                 severity="warn",
                 title="Review lifecycle ledger proposals",
-                summary="%s lifecycle proposals are pending; archive only with explicit write approval."
-                % lifecycle.get("proposal_count", 0),
+                summary="{} lifecycle proposals are pending; archive only with explicit write approval.".format(lifecycle.get("proposal_count", 0)),
                 command=_command(
                     "memory_lifecycle.py",
                     "--project-root",
@@ -200,8 +198,7 @@ def _knowledge_recommendations(
                 category="knowledge-formation",
                 severity="warn",
                 title="Review pending memory formation inbox",
-                summary="%s review inbox items need human judgment before writing memory."
-                % review.get("review_inbox_count", 0),
+                summary="{} review inbox items need human judgment before writing memory.".format(review.get("review_inbox_count", 0)),
                 command=_command(
                     "memory_review.py",
                     "--project-root",
@@ -222,8 +219,7 @@ def _knowledge_recommendations(
                 category="knowledge-formation",
                 severity="warn",
                 title="Promote reviewed golden candidate",
-                summary="Pending golden candidate `%s` is ready; review expected targets before writing."
-                % item.get("name", ""),
+                summary="Pending golden candidate `{}` is ready; review expected targets before writing.".format(item.get("name", "")),
                 command=str(item.get("command", "")),
                 source="memory_review.golden_candidates",
                 write_required=True,
@@ -235,8 +231,7 @@ def _knowledge_recommendations(
                 category="knowledge-formation",
                 severity="warn",
                 title="Fill or reject incomplete golden candidate",
-                summary="Pending golden candidate `%s` needs an expected target or rejection reason."
-                % item.get("name", ""),
+                summary="Pending golden candidate `{}` needs an expected target or rejection reason.".format(item.get("name", "")),
                 command=str(item.get("command", "")),
                 source="memory_review.golden_candidates",
                 write_required=True,
@@ -262,8 +257,7 @@ def _retrieval_recommendations(
                 category="retrieval-quality",
                 severity="fail" if golden.get("required_failed", 0) else "warn",
                 title="Investigate retrieval golden regression",
-                summary="Golden eval status is `%s` with %s required failures."
-                % (golden_status, golden.get("required_failed", 0)),
+                summary="Golden eval status is `{}` with {} required failures.".format(golden_status, golden.get("required_failed", 0)),
                 command=_command(
                     "retrieval_golden_eval.py",
                     "--project-root",
@@ -306,8 +300,7 @@ def _retrieval_recommendations(
                 category="retrieval-quality",
                 severity="fail" if release_status == "fail" else "warn",
                 title="Compare release retrieval baseline",
-                summary="Previous release baseline reports `%s`; inspect rank deltas before release."
-                % release_status,
+                summary=f"Previous release baseline reports `{release_status}`; inspect rank deltas before release.",
                 command=_command(
                     "retrieval_golden_eval.py",
                     "--project-root",
@@ -376,8 +369,8 @@ def _project_matrix_recommendations(
                 _recommendation(
                     category="cross-project-reliability",
                     severity="warn",
-                    title="Refresh %s project index" % project_name,
-                    summary="%s has stale, missing, or tampered project retrieval sidecars." % project_name,
+                    title=f"Refresh {project_name} project index",
+                    summary=f"{project_name} has stale, missing, or tampered project retrieval sidecars.",
                     command=_command(
                         "memory_index_maintain.py",
                         "--project-root",
@@ -400,8 +393,8 @@ def _project_matrix_recommendations(
                 _recommendation(
                     category="cross-project-reliability",
                     severity="fail" if doctor.get("status") == "fail" else "warn",
-                    title="Diagnose %s MemoryWiki bridge" % project_name,
-                    summary="%s MCP bridge doctor reports `%s`." % (project_name, doctor.get("status")),
+                    title=f"Diagnose {project_name} MemoryWiki bridge",
+                    summary="{} MCP bridge doctor reports `{}`.".format(project_name, doctor.get("status")),
                     command=_command(
                         "memorywiki_mcp_doctor.py",
                         "--python",
@@ -424,8 +417,8 @@ def _project_matrix_recommendations(
                 _recommendation(
                     category="cross-project-reliability",
                     severity="fail" if golden.get("status") == "fail" else "warn",
-                    title="Investigate %s project golden eval" % project_name,
-                    summary="%s project golden eval status is `%s`." % (project_name, golden.get("status")),
+                    title=f"Investigate {project_name} project golden eval",
+                    summary="{} project golden eval status is `{}`.".format(project_name, golden.get("status")),
                     command=_command(
                         "retrieval_golden_eval.py",
                         "--project-root",
@@ -444,7 +437,7 @@ def _project_matrix_recommendations(
                 _recommendation(
                     category="cross-project-reliability",
                     severity="warn",
-                    title="Adjust %s project golden coverage" % project_name,
+                    title=f"Adjust {project_name} project golden coverage",
                     summary=str(coverage.get("message", "")),
                     command="",
                     source="memorywiki_project_matrix.case_coverage",
@@ -483,7 +476,7 @@ def _release_recommendations(
     summary = (
         "No previous release baseline was provided; run release checks before checkpointing."
         if status in {"", "missing"}
-        else "Release baseline status is `%s`; include it in the next checkpoint review." % status
+        else f"Release baseline status is `{status}`; include it in the next checkpoint review."
     )
     return [
         _recommendation(
@@ -696,31 +689,28 @@ def render_markdown(payload: dict[str, Any]) -> str:
     lines = [
         "# MemoryWiki Ops Dashboard",
         "",
-        "- Status: `%s`" % payload["status"],
-        "- Period: `%s`" % payload["period"],
+        "- Status: `{}`".format(payload["status"]),
+        "- Period: `{}`".format(payload["period"]),
         "- Read-only: `%s`" % ("yes" if payload["read_only"] else "no"),
-        "- Quality: `%s`, health issues `%s`, review inbox `%s`, lifecycle proposals `%s`"
-        % (
+        "- Quality: `{}`, health issues `{}`, review inbox `{}`, lifecycle proposals `{}`".format(
             quality.get("status", ""),
             quality.get("health", {}).get("issue_count", 0),
             quality.get("review", {}).get("review_inbox_count", 0),
             quality.get("lifecycle", {}).get("proposal_count", 0),
         ),
-        "- Golden eval: `%s`, pass `%s/%s`, required failed `%s`, MRR `%s`"
-        % (
+        "- Golden eval: `{}`, pass `{}/{}`, required failed `{}`, MRR `{}`".format(
             golden.get("status", ""),
             golden.get("passed", 0),
             golden.get("total", 0),
             golden.get("required_failed", 0),
-            "%.3f" % golden.get("mean_reciprocal_rank", 0.0)
+            "{:.3f}".format(golden.get("mean_reciprocal_rank", 0.0))
             if isinstance(golden.get("mean_reciprocal_rank"), (int, float))
             else "n/a",
         ),
-        "- Golden candidates: `%s` ready / `%s` total"
-        % (candidates.get("ready_count", 0), candidates.get("candidate_count", 0)),
-        "- Release baseline: `%s`" % payload.get("release_baseline", {}).get("status", ""),
-        "- Embedding readiness: `%s`" % payload.get("embedding_readiness", {}).get("status", ""),
-        "- MCP Python: `%s` (%s)" % (
+        "- Golden candidates: `{}` ready / `{}` total".format(candidates.get("ready_count", 0), candidates.get("candidate_count", 0)),
+        "- Release baseline: `{}`".format(payload.get("release_baseline", {}).get("status", "")),
+        "- Embedding readiness: `{}`".format(payload.get("embedding_readiness", {}).get("status", "")),
+        "- MCP Python: `{}` ({})".format(
             payload.get("operator", {}).get("python", ""),
             payload.get("operator", {}).get("python_source", ""),
         ),
@@ -740,9 +730,9 @@ def render_markdown(payload: dict[str, Any]) -> str:
             )
         )
         if item.get("summary"):
-            lines.append("  Summary: %s" % item.get("summary", ""))
+            lines.append("  Summary: {}".format(item.get("summary", "")))
         if command:
-            lines.append("  Command (%s): `%s`" % (suffix, command))
+            lines.append(f"  Command ({suffix}): `{command}`")
     if not recommendations.get("items"):
         lines.append("- No recommended action.")
     lines.extend(
@@ -777,8 +767,8 @@ def render_markdown(payload: dict[str, Any]) -> str:
     else:
         lines.append("- Project matrix skipped.")
     lines.extend(["", "## Next Read-Only Reports"])
-    lines.append("- Daily: `%s`" % payload.get("actions", {}).get("daily_command", ""))
-    lines.append("- Weekly: `%s`" % payload.get("actions", {}).get("weekly_command", ""))
+    lines.append("- Daily: `{}`".format(payload.get("actions", {}).get("daily_command", "")))
+    lines.append("- Weekly: `{}`".format(payload.get("actions", {}).get("weekly_command", "")))
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -787,16 +777,16 @@ def render_html(payload: dict[str, Any]) -> str:
     paragraphs = []
     for line in markdown.splitlines():
         if line.startswith("# "):
-            paragraphs.append("<h1>%s</h1>" % escape(line[2:]))
+            paragraphs.append(f"<h1>{escape(line[2:])}</h1>")
         elif line.startswith("## "):
-            paragraphs.append("<h2>%s</h2>" % escape(line[3:]))
+            paragraphs.append(f"<h2>{escape(line[3:])}</h2>")
         elif line.startswith("- "):
-            paragraphs.append("<p>%s</p>" % escape(line[2:]))
+            paragraphs.append(f"<p>{escape(line[2:])}</p>")
         elif line.startswith("|"):
-            paragraphs.append("<pre>%s</pre>" % escape(line))
+            paragraphs.append(f"<pre>{escape(line)}</pre>")
         elif line.strip():
-            paragraphs.append("<p>%s</p>" % escape(line))
-    return "<!doctype html>\n<html><body>\n%s\n</body></html>\n" % "\n".join(paragraphs)
+            paragraphs.append(f"<p>{escape(line)}</p>")
+    return "<!doctype html>\n<html><body>\n{}\n</body></html>\n".format("\n".join(paragraphs))
 
 
 def build_parser() -> argparse.ArgumentParser:

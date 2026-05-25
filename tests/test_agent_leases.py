@@ -7,7 +7,6 @@ import pytest
 
 from agent_leases import acquire_lease, cleanup_expired_leases, current_leases, release_lease
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

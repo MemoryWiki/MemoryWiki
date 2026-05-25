@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
-
+from datetime import datetime
+from pathlib import Path
 
 DEFAULT_BACKUP_ROOT = Path.home() / ".memorywiki" / "backups"
 SAFE_NAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
@@ -23,25 +22,25 @@ DEFAULT_GITIGNORE = [
 def _safe_root(root: str | Path) -> Path:
     path = Path(root).expanduser()
     if not path.exists() or path.is_symlink() or not path.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % path)
+        raise ValueError(f"Memory root must be a real directory: {path}")
     for ancestor in path.parents:
         if ancestor.is_symlink():
-            raise ValueError("Memory root may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"Memory root may not be below a symlink: {ancestor}")
     return path
 
 
 def _safe_backup_root(root: str | Path) -> Path:
     path = Path(root).expanduser()
     if path.exists() and (path.is_symlink() or not path.is_dir()):
-        raise ValueError("Backup root must be a real directory: %s" % path)
+        raise ValueError(f"Backup root must be a real directory: {path}")
     for component in [path, *path.parents]:
         if component.exists() and component.is_symlink():
-            raise ValueError("Backup root may not be below a symlink: %s" % component)
+            raise ValueError(f"Backup root may not be below a symlink: {component}")
     cursor = path
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.is_symlink():
-        raise ValueError("Backup root may not be below a symlink: %s" % cursor)
+        raise ValueError(f"Backup root may not be below a symlink: {cursor}")
     path.mkdir(parents=True, exist_ok=True)
     if os.name != "nt":
         os.chmod(path, 0o700)
@@ -72,7 +71,7 @@ def _write_text_no_follow(path: Path, text: str) -> None:
         fd = os.open(path, flags, 0o600)
     except OSError:
         if path.is_symlink():
-            raise ValueError("Managed backup file may not be a symlink: %s" % path)
+            raise ValueError(f"Managed backup file may not be a symlink: {path}")
         raise
     try:
         os.write(fd, text.encode("utf-8"))
@@ -83,7 +82,7 @@ def _write_text_no_follow(path: Path, text: str) -> None:
 def _ensure_gitignore(root: Path) -> None:
     path = root / ".gitignore"
     if path.exists() and path.is_symlink():
-        raise ValueError("Gitignore may not be a symlink: %s" % path)
+        raise ValueError(f"Gitignore may not be a symlink: {path}")
     existing = path.read_text(encoding="utf-8") if path.exists() and not path.is_symlink() else ""
     lines = existing.splitlines()
     changed = False
@@ -105,7 +104,7 @@ def _ensure_repo(root: Path) -> None:
 def _ensure_remote_hooks_disabled(remote: Path) -> None:
     hooks_dir = remote / ".memorywiki-disabled-hooks"
     if hooks_dir.exists() and (hooks_dir.is_symlink() or not hooks_dir.is_dir()):
-        raise ValueError("Backup remote hook guard must be a real directory: %s" % hooks_dir)
+        raise ValueError(f"Backup remote hook guard must be a real directory: {hooks_dir}")
     hooks_dir.mkdir(exist_ok=True)
     if os.name != "nt":
         os.chmod(hooks_dir, 0o700)
@@ -118,24 +117,24 @@ def _assert_no_symlink_tree(root: Path, label: str) -> None:
         for dirname in dirs:
             child = current_path / dirname
             if child.is_symlink():
-                raise ValueError("%s may not contain symlinks: %s" % (label, child))
+                raise ValueError(f"{label} may not contain symlinks: {child}")
         for filename in files:
             child = current_path / filename
             if child.is_symlink():
-                raise ValueError("%s may not contain symlinks: %s" % (label, child))
+                raise ValueError(f"{label} may not contain symlinks: {child}")
 
 
 def _ensure_remote(root: Path, backup_root: Path, name: str) -> Path:
-    remote = backup_root / ("%s.git" % name)
+    remote = backup_root / (f"{name}.git")
     if not remote.exists():
         _run(["git", "init", "--bare", str(remote)])
     elif remote.is_symlink() or not remote.is_dir():
-        raise ValueError("Backup remote must be a real directory: %s" % remote)
+        raise ValueError(f"Backup remote must be a real directory: {remote}")
     _assert_no_symlink_tree(remote, "Backup remote")
     _ensure_remote_hooks_disabled(remote)
     _run(["git", "--git-dir", str(remote), "config", "--local", "receive.shallowUpdate", "true"])
     if os.name != "nt":
-        for current, dirs, files in os.walk(remote):
+        for current, _dirs, files in os.walk(remote):
             os.chmod(current, 0o700)
             for filename in files:
                 os.chmod(Path(current) / filename, 0o600)
@@ -210,9 +209,9 @@ def backup_memory(
     bundle_path = None
     if bundle and not _is_shallow_repo(memory_root):
         suffix = sha or datetime.now().strftime("%Y%m%d%H%M%S")
-        bundle_path = backups / ("%s-%s.bundle" % (safe_name, suffix))
+        bundle_path = backups / (f"{safe_name}-{suffix}.bundle")
         if bundle_path.exists() and bundle_path.is_symlink():
-            raise ValueError("Backup bundle may not be a symlink: %s" % bundle_path)
+            raise ValueError(f"Backup bundle may not be a symlink: {bundle_path}")
         _run(["git", "bundle", "create", str(bundle_path), *_bundle_refs(memory_root)], cwd=memory_root)
         if os.name != "nt":
             os.chmod(bundle_path, 0o600)
@@ -256,12 +255,12 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
         if result["committed"]:
-            print("Committed %s" % result["commit"])
+            print("Committed {}".format(result["commit"]))
         else:
             print("No changes to commit; pushed existing HEAD.")
-        print("Remote: %s" % result["remote"])
+        print("Remote: {}".format(result["remote"]))
         if result.get("bundle"):
-            print("Bundle: %s" % result["bundle"])
+            print("Bundle: {}".format(result["bundle"]))
     return 0
 
 

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from pathlib import Path
 import json
+from pathlib import Path
 from types import SimpleNamespace
 
+import retrieval_golden_eval
 from memory_system.models import SemanticMemory
 from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
-import retrieval_golden_eval
 from retrieval_golden_eval import DEFAULT_CASES, RetrievalCase, load_cases, run_golden_eval
 
 

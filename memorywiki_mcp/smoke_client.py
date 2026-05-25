@@ -1,12 +1,14 @@
+"""Dogfood client for verifying MemoryWiki MCP server behavior end to end."""
+
 from __future__ import annotations
 
 import argparse
 import asyncio
 import json
 import os
-from pathlib import Path
 import sys
 import tempfile
+from pathlib import Path
 from typing import Any
 
 from memorywiki_mcp.client_config import build_server_config
@@ -28,7 +30,7 @@ async def _call_readonly(session: Any, query: str) -> dict[str, Any]:
     names = [tool.name for tool in tools.tools]
     missing = sorted(set(TOOL_NAMES) - set(names))
     if missing:
-        raise RuntimeError("Missing MemoryWiki MCP tools: %s" % ", ".join(missing))
+        raise RuntimeError("Missing MemoryWiki MCP tools: {}".format(", ".join(missing)))
 
     index = await session.call_tool("memorywiki_index_maintain", {"input": {"scope": "all"}})
     recall = await session.call_tool(

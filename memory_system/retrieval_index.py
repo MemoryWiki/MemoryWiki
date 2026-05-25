@@ -1,20 +1,21 @@
+"""Build, validate, and query local retrieval sidecar indexes."""
+
 from __future__ import annotations
 
-from collections import Counter
-from dataclasses import asdict, dataclass
-from datetime import datetime
 import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import re
+from collections import Counter
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import Iterable
 
 from memory_system.models import SourceRef
 from memory_system.paths import MemoryScopePaths
 from memory_system.store import MAX_MANAGED_FILES, MAX_MANAGED_READ_BYTES, ScopedMemoryStore
-
 
 INDEX_SCHEMA_VERSION = 2
 LOCAL_EMBEDDING_MODEL = "memorywiki-local-hash-v1"
@@ -123,12 +124,12 @@ def conflict_update_entries(update_log: Iterable[str]) -> list[str]:
 def _safe_root(root: Path) -> Path:
     root = root.expanduser()
     if not root.exists():
-        raise ValueError("Memory root does not exist: %s" % root)
+        raise ValueError(f"Memory root does not exist: {root}")
     if root.is_symlink() or not root.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % root)
+        raise ValueError(f"Memory root must be a real directory: {root}")
     for ancestor in [root] + list(root.parents):
         if ancestor.exists() and ancestor.is_symlink():
-            raise ValueError("Memory root may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"Memory root may not be below a symlink: {ancestor}")
     return root
 
 
@@ -137,24 +138,24 @@ def _assert_safe_child(root: Path, path: Path) -> None:
     try:
         path.parent.resolve(strict=False).relative_to(root.resolve(strict=True))
     except (OSError, ValueError):
-        raise ValueError("Retrieval index path must stay within memory root: %s" % path)
+        raise ValueError(f"Retrieval index path must stay within memory root: {path}")
     cursor = root
     try:
         relative = path.relative_to(root)
     except ValueError:
-        raise ValueError("Retrieval index path must stay within memory root: %s" % path)
+        raise ValueError(f"Retrieval index path must stay within memory root: {path}")
     for part in relative.parts[:-1]:
         cursor = cursor / part
         if cursor.exists() and cursor.is_symlink():
-            raise ValueError("Retrieval index path may not cross a symlink: %s" % cursor)
+            raise ValueError(f"Retrieval index path may not cross a symlink: {cursor}")
     if path.exists() and path.is_symlink():
-        raise ValueError("Retrieval index path may not be a symlink: %s" % path)
+        raise ValueError(f"Retrieval index path may not be a symlink: {path}")
 
 
 def _safe_relative_path(root: Path, relative_text: str) -> Path:
     relative = Path(str(relative_text or ""))
     if relative.is_absolute() or ".." in relative.parts or not relative.parts:
-        raise ValueError("Invalid indexed source path: %s" % relative_text)
+        raise ValueError(f"Invalid indexed source path: {relative_text}")
     path = root / relative
     _assert_safe_child(root, path)
     return path
@@ -163,7 +164,7 @@ def _safe_relative_path(root: Path, relative_text: str) -> Path:
 def _read_file_bytes(root: Path, path: Path) -> bytes:
     _assert_safe_child(root, path)
     if not path.exists() or not path.is_file():
-        raise ValueError("Indexed source file is missing: %s" % path)
+        raise ValueError(f"Indexed source file is missing: {path}")
     flags = os.O_RDONLY
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -171,7 +172,7 @@ def _read_file_bytes(root: Path, path: Path) -> bytes:
     try:
         stat = os.fstat(fd)
         if stat.st_size > MAX_MANAGED_READ_BYTES:
-            raise ValueError("Indexed source file exceeds safe read limit: %s" % path)
+            raise ValueError(f"Indexed source file exceeds safe read limit: {path}")
         return os.read(fd, stat.st_size)
     finally:
         os.close(fd)
@@ -243,7 +244,7 @@ def build_index_rows(store: ScopedMemoryStore, scope: str) -> list[dict]:
     rows = []
     for item in store.list_semantic_memories(limit=MAX_MANAGED_FILES):
         source_refs = item.source_refs + [
-            SourceRef("memory-file", "semantic/%s.md" % item.id, item.id)
+            SourceRef("memory-file", f"semantic/{item.id}.md", item.id)
         ]
         rows.append(
             _index_row(
@@ -265,7 +266,7 @@ def build_index_rows(store: ScopedMemoryStore, scope: str) -> list[dict]:
     for item in store.list_procedural_memories(limit=MAX_MANAGED_FILES):
         text = "\n".join([item.trigger] + item.steps)
         source_refs = item.source_refs + [
-            SourceRef("memory-file", "procedures/%s.md" % item.id, item.id)
+            SourceRef("memory-file", f"procedures/{item.id}.md", item.id)
         ]
         rows.append(
             _index_row(
@@ -304,7 +305,7 @@ def build_index_rows(store: ScopedMemoryStore, scope: str) -> list[dict]:
                 [],
                 0.0,
                 0.0,
-                [SourceRef("session", "sessions/%s.md" % session.id, session.id)],
+                [SourceRef("session", f"sessions/{session.id}.md", session.id)],
                 store.paths.session_file(session.id),
             )
         )
@@ -324,7 +325,7 @@ def build_index_rows(store: ScopedMemoryStore, scope: str) -> list[dict]:
                 [],
                 0.0,
                 0.0,
-                [SourceRef("episode", "episodes/%s.md" % date_text, date_text)],
+                [SourceRef("episode", f"episodes/{date_text}.md", date_text)],
                 store.paths.episode_for_date(date_text),
             )
         )
@@ -360,11 +361,11 @@ def write_index(root: Path, rows: list[dict]) -> Path:
     root = _safe_root(root)
     index_dir = root / "retrieval"
     if index_dir.exists() and (index_dir.is_symlink() or not index_dir.is_dir()):
-        raise ValueError("Retrieval index directory must be a real directory: %s" % index_dir)
+        raise ValueError(f"Retrieval index directory must be a real directory: {index_dir}")
     index_dir.mkdir(parents=True, exist_ok=True)
     index_path = index_dir / "index.jsonl"
     _assert_safe_child(root, index_path)
-    tmp_path = index_dir / ("index.%s.tmp" % os.getpid())
+    tmp_path = index_dir / (f"index.{os.getpid()}.tmp")
     if tmp_path.exists():
         tmp_path.unlink()
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
@@ -414,20 +415,20 @@ def _validate_derived_row_fields(row: dict, line_number: int) -> list[str]:
     weighted_text = _weighted_text(title, text, concepts)
     expected_counts = term_counts_for_index(weighted_text)
     if _coerce_term_counts(row.get("term_counts") or {}) != expected_counts:
-        warnings.append("Stale retrieval index row %s: derived term counts changed" % line_number)
+        warnings.append(f"Stale retrieval index row {line_number}: derived term counts changed")
     expected_vector = local_embedding_for_index(weighted_text)
     if (
         row.get("embedding_model") != LOCAL_EMBEDDING_MODEL
         or row.get("embedding_dimensions") != LOCAL_EMBEDDING_DIMENSIONS
         or _coerce_embedding_vector(row.get("embedding_vector") or {}) != expected_vector
     ):
-        warnings.append("Stale retrieval index row %s: embedding vector changed" % line_number)
+        warnings.append(f"Stale retrieval index row {line_number}: embedding vector changed")
     expected_conflicts = conflict_update_entries(_row_update_log(row))
     if bool(row.get("conflict_history")) != bool(expected_conflicts):
-        warnings.append("Stale retrieval index row %s: conflict flag changed" % line_number)
+        warnings.append(f"Stale retrieval index row {line_number}: conflict flag changed")
     indexed_conflicts = [str(entry) for entry in (row.get("conflict_entries") or [])]
     if indexed_conflicts != expected_conflicts:
-        warnings.append("Stale retrieval index row %s: conflict entries changed" % line_number)
+        warnings.append(f"Stale retrieval index row {line_number}: conflict entries changed")
     return warnings
 
 
@@ -481,14 +482,12 @@ def _validate_against_canonical_row(
     canonical = canonical_rows.get(_row_key(row))
     if canonical is None:
         return [
-            "Stale retrieval index row %s: canonical source is missing or changed"
-            % line_number
+            f"Stale retrieval index row {line_number}: canonical source is missing or changed"
         ]
     for field in CANONICAL_ROW_FIELDS:
         if row.get(field) != canonical.get(field):
             return [
-                "Stale retrieval index row %s for %s: canonical content changed"
-                % (line_number, row.get("source_path", ""))
+                "Stale retrieval index row {} for {}: canonical content changed".format(line_number, row.get("source_path", ""))
             ]
     return []
 
@@ -520,7 +519,7 @@ def load_index(root: Path, scope: str) -> IndexLoadResult:
     if not index_path.exists():
         return IndexLoadResult(
             rows=[],
-            warnings=["Missing retrieval index for %s memory: %s" % (scope, index_path)],
+            warnings=[f"Missing retrieval index for {scope} memory: {index_path}"],
             fresh=False,
         )
     try:
@@ -528,7 +527,7 @@ def load_index(root: Path, scope: str) -> IndexLoadResult:
     except (OSError, ValueError) as exc:
         return IndexLoadResult(
             rows=[],
-            warnings=["Unreadable retrieval index for %s memory: %s" % (scope, exc)],
+            warnings=[f"Unreadable retrieval index for {scope} memory: {exc}"],
             fresh=False,
         )
     rows = []
@@ -536,7 +535,7 @@ def load_index(root: Path, scope: str) -> IndexLoadResult:
     canonical_rows: dict[tuple[str, str, str], dict] | None = None
     for line_number, line in enumerate(raw.decode("utf-8").splitlines(), start=1):
         if line_number > MAX_INDEX_ROWS:
-            warnings.append("Retrieval index row limit exceeded: %s" % index_path)
+            warnings.append(f"Retrieval index row limit exceeded: {index_path}")
             fresh = False
             break
         if not line.strip():
@@ -544,11 +543,11 @@ def load_index(root: Path, scope: str) -> IndexLoadResult:
         try:
             row = json.loads(line)
         except json.JSONDecodeError:
-            warnings.append("Malformed retrieval index row %s: %s" % (line_number, index_path))
+            warnings.append(f"Malformed retrieval index row {line_number}: {index_path}")
             fresh = False
             continue
         if row.get("schema_version") != INDEX_SCHEMA_VERSION:
-            warnings.append("Unsupported retrieval index row schema at row %s" % line_number)
+            warnings.append(f"Unsupported retrieval index row schema at row {line_number}")
             fresh = False
             continue
         if row.get("scope") != scope:
@@ -557,8 +556,7 @@ def load_index(root: Path, scope: str) -> IndexLoadResult:
         text_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
         if row.get("text_sha256") != text_hash:
             warnings.append(
-                "Stale retrieval index row %s for %s: text hash changed"
-                % (line_number, row.get("source_path", ""))
+                "Stale retrieval index row {} for {}: text hash changed".format(line_number, row.get("source_path", ""))
             )
             fresh = False
             continue
@@ -566,14 +564,13 @@ def load_index(root: Path, scope: str) -> IndexLoadResult:
             source_path = _safe_relative_path(root, str(row.get("source_path", "")))
             metadata = _source_metadata(root, source_path)
         except (OSError, UnicodeDecodeError, ValueError) as exc:
-            warnings.append("Stale retrieval index row %s: %s" % (line_number, exc))
+            warnings.append(f"Stale retrieval index row {line_number}: {exc}")
             fresh = False
             continue
         for field in ("sha256", "size", "mtime_ns"):
             if row.get(field) != metadata[field]:
                 warnings.append(
-                    "Stale retrieval index row %s for %s: %s changed"
-                    % (line_number, row.get("source_path", ""), field)
+                    "Stale retrieval index row {} for {}: {} changed".format(line_number, row.get("source_path", ""), field)
                 )
                 fresh = False
                 break
@@ -587,7 +584,7 @@ def load_index(root: Path, scope: str) -> IndexLoadResult:
                 try:
                     canonical_rows = _canonical_rows_by_key(root, scope)
                 except (OSError, UnicodeDecodeError, ValueError) as exc:
-                    warnings.append("Unable to validate retrieval index against canonical memory: %s" % exc)
+                    warnings.append(f"Unable to validate retrieval index against canonical memory: {exc}")
                     fresh = False
                     continue
             canonical_warnings = _validate_against_canonical_row(

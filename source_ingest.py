@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
 import hashlib
 import json
 import os
-from pathlib import Path
 import sys
+from datetime import datetime
+from pathlib import Path
 
 from memory_system.models import ProceduralMemory, SemanticMemory, SourceRef
-from memory_system.paths import MemoryScopePaths
 from memory_system.sanitizer import sanitize_text
 from memory_system.store import ScopedMemoryStore
-
+from memory_system.store_guard import build_scoped_store
 
 MAX_SOURCE_BYTES = 2_000_000
 
@@ -21,31 +20,10 @@ def _now() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-def _safe_store(root: str | Path) -> ScopedMemoryStore:
-    path = Path(root).expanduser()
-    if not path.exists():
-        raise ValueError("Memory root must exist before source ingest: %s" % path)
-    if path.is_symlink() or not path.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % path)
-    cursor = path
-    while not cursor.exists() and cursor != cursor.parent:
-        cursor = cursor.parent
-    if cursor.is_symlink():
-        raise ValueError("Memory root may not be below a symlink: %s" % cursor)
-    for ancestor in cursor.parents:
-        if ancestor.is_symlink():
-            raise ValueError("Memory root may not be below a symlink: %s" % ancestor)
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(path, scope="project"),
-        sanitize_on_write=True,
-        secure_permissions=True,
-    )
-
-
 def _resolve_source(store: ScopedMemoryStore, source: str) -> Path:
     sources_dir = store.paths.sources_dir
     if not sources_dir.exists() or sources_dir.is_symlink() or not sources_dir.is_dir():
-        raise ValueError("sources/ must be a real directory: %s" % sources_dir)
+        raise ValueError(f"sources/ must be a real directory: {sources_dir}")
     candidate = Path(source).expanduser()
     if not candidate.is_absolute():
         candidate = sources_dir / candidate
@@ -55,11 +33,11 @@ def _resolve_source(store: ScopedMemoryStore, source: str) -> Path:
         resolved_root = sources_dir.resolve(strict=True)
         resolved_source.relative_to(resolved_root)
     except (OSError, ValueError):
-        raise ValueError("Source must stay below sources/: %s" % source)
+        raise ValueError(f"Source must stay below sources/: {source}")
     if not resolved_source.is_file():
-        raise ValueError("Source document must be a file: %s" % candidate)
+        raise ValueError(f"Source document must be a file: {candidate}")
     if resolved_source.stat().st_size > MAX_SOURCE_BYTES:
-        raise ValueError("Source document is too large: %s" % candidate)
+        raise ValueError(f"Source document is too large: {candidate}")
     return resolved_source
 
 
@@ -76,12 +54,12 @@ def _assert_no_symlink_components(path: Path, root: Path) -> None:
         cursor = cursor.parent
     for item in checked:
         if item.exists() and item.is_symlink():
-            raise ValueError("Source path may not include symlinks: %s" % item)
+            raise ValueError(f"Source path may not include symlinks: {item}")
     for item in checked:
         try:
             item.resolve(strict=False).relative_to(root_resolved)
         except ValueError:
-            raise ValueError("Source must stay below sources/: %s" % path)
+            raise ValueError(f"Source must stay below sources/: {path}")
 
 
 def _read_source(path: Path) -> tuple[bytes, str]:
@@ -92,12 +70,12 @@ def _read_source(path: Path) -> tuple[bytes, str]:
         fd = os.open(path, flags)
     except OSError:
         if path.is_symlink():
-            raise ValueError("Source document may not be a symlink: %s" % path)
+            raise ValueError(f"Source document may not be a symlink: {path}")
         raise
     try:
         size = os.fstat(fd).st_size
         if size > MAX_SOURCE_BYTES:
-            raise ValueError("Source document is too large: %s" % path)
+            raise ValueError(f"Source document is too large: {path}")
         raw = os.read(fd, size)
     finally:
         os.close(fd)
@@ -105,7 +83,7 @@ def _read_source(path: Path) -> tuple[bytes, str]:
 
 
 def _relative_source_path(store: ScopedMemoryStore, path: Path) -> str:
-    return "sources/%s" % path.relative_to(store.paths.sources_dir.resolve()).as_posix()
+    return f"sources/{path.relative_to(store.paths.sources_dir.resolve()).as_posix()}"
 
 
 def _source_ref(store: ScopedMemoryStore, path: Path, digest: str, text: str) -> SourceRef:
@@ -119,7 +97,7 @@ def _source_ref(store: ScopedMemoryStore, path: Path, digest: str, text: str) ->
 
 
 def ingest_source(args) -> dict:
-    store = _safe_store(args.root)
+    store = build_scoped_store(args.root, scope="project", must_exist=True)
     source_path = _resolve_source(store, args.source)
     raw, text = _read_source(source_path)
     digest = hashlib.sha256(raw).hexdigest()
@@ -137,7 +115,7 @@ def ingest_source(args) -> dict:
                 conflict=True,
                 now=timestamp,
             )
-        affected_paths.append("semantic/%s.md" % args.conflict_with)
+        affected_paths.append(f"semantic/{args.conflict_with}.md")
     elif args.target_kind == "semantic":
         if not args.id or not args.title or not args.summary:
             raise ValueError("--id, --title, and --summary are required for semantic ingest")
@@ -145,8 +123,7 @@ def ingest_source(args) -> dict:
         update_log = list(existing.update_log) if existing else []
         if existing:
             update_log.append(
-                "%s Update: Refreshed from %s"
-                % (timestamp, ref.path)
+                f"{timestamp} Update: Refreshed from {ref.path}"
             )
         item = SemanticMemory(
             id=args.id,
@@ -164,7 +141,7 @@ def ingest_source(args) -> dict:
         )
         if not args.dry_run:
             store.write_semantic_memory(item)
-        affected_paths.append("semantic/%s.md" % args.id)
+        affected_paths.append(f"semantic/{args.id}.md")
     else:
         if not args.id or not args.title:
             raise ValueError("--id and --title are required for procedure ingest")
@@ -185,7 +162,7 @@ def ingest_source(args) -> dict:
         )
         if not args.dry_run:
             store.write_procedural_memory(item)
-        affected_paths.append("procedures/%s.md" % args.id)
+        affected_paths.append(f"procedures/{args.id}.md")
 
     ledger_row = {
         "ts": timestamp,
@@ -203,9 +180,9 @@ def ingest_source(args) -> dict:
 
 def render_human(payload: dict) -> str:
     lines = [
-        "Ingested %s" % payload["source_path"],
-        "Digest: %s" % payload["source_sha256"],
-        "Affected: %s" % ", ".join(payload["affected_paths"]),
+        "Ingested {}".format(payload["source_path"]),
+        "Digest: {}".format(payload["source_sha256"]),
+        "Affected: {}".format(", ".join(payload["affected_paths"])),
     ]
     return "\n".join(lines) + "\n"
 

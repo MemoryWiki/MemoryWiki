@@ -1,3 +1,5 @@
+"""Prompt templates used by MemoryWiki compaction workflows."""
+
 def build_compaction_prompt(
     old_conversation,
     current_memory,

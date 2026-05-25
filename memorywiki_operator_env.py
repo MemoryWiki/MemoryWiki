@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
-
 
 SERVER_NAME = "memorywiki-memory"
 MAX_CONFIG_BYTES = 2_000_000
@@ -18,17 +17,17 @@ DEFAULT_TRUSTED_PYTHON_DIRS = (
 def _safe_config_file(path: str | Path) -> Path:
     candidate = Path(path).expanduser()
     if candidate.is_symlink():
-        raise ValueError("MCP config must be a real file: %s" % candidate)
+        raise ValueError(f"MCP config must be a real file: {candidate}")
     if candidate.exists() and not candidate.is_file():
-        raise ValueError("MCP config must be a real file: %s" % candidate)
+        raise ValueError(f"MCP config must be a real file: {candidate}")
     cursor = candidate.parent
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.exists() and cursor.is_symlink():
-        raise ValueError("MCP config may not be below a symlink: %s" % cursor)
+        raise ValueError(f"MCP config may not be below a symlink: {cursor}")
     for parent in cursor.parents:
         if parent.is_symlink():
-            raise ValueError("MCP config may not be below a symlink: %s" % parent)
+            raise ValueError(f"MCP config may not be below a symlink: {parent}")
     return candidate
 
 
@@ -42,12 +41,12 @@ def _read_json_config(path: Path) -> dict[str, Any] | None:
     try:
         size = os.fstat(fd).st_size
         if size > MAX_CONFIG_BYTES:
-            raise ValueError("MCP config exceeds safe read limit: %s" % path)
+            raise ValueError(f"MCP config exceeds safe read limit: {path}")
         payload = json.loads(os.read(fd, size).decode("utf-8") or "{}")
     finally:
         os.close(fd)
     if not isinstance(payload, dict):
-        raise ValueError("MCP config must be a JSON object: %s" % path)
+        raise ValueError(f"MCP config must be a JSON object: {path}")
     return payload
 
 
@@ -124,7 +123,7 @@ def resolve_mcp_python(
             "python": fallback_text,
             "source": "fallback",
             "mcp_config": str(config_path),
-            "warning": "MCP config does not define %s; using fallback Python." % SERVER_NAME,
+            "warning": f"MCP config does not define {SERVER_NAME}; using fallback Python.",
         }
     command = str(server.get("command", "")).strip()
     if not _looks_like_python(command):

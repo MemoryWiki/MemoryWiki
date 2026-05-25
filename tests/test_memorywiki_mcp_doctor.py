@@ -3,14 +3,13 @@ from __future__ import annotations
 import json
 import os
 import platform
-from pathlib import Path
 import stat
+from pathlib import Path
 
 import pytest
 
-from memorywiki_mcp_doctor import _check_python, run_doctor
 from memorywiki_mcp.client_config import build_mcp_json
-
+from memorywiki_mcp_doctor import _check_python, run_doctor
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 

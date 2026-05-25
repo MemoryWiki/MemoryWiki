@@ -1,11 +1,10 @@
+import os
+import stat
 import subprocess
 import sys
 from pathlib import Path
-import os
-import stat
 
 import pytest
-
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -170,7 +169,7 @@ def test_memory_backup_accepts_shallow_checkout(tmp_path):
     subprocess.run(["git", "commit", "-m", "initial"], cwd=source, check=True, capture_output=True, text=True)
     shallow = tmp_path / "shallow"
     subprocess.run(
-        ["git", "clone", "--depth", "1", "file://%s" % source, str(shallow)],
+        ["git", "clone", "--depth", "1", f"file://{source}", str(shallow)],
         check=True,
         capture_output=True,
         text=True,
@@ -283,7 +282,7 @@ def test_memory_backup_disables_existing_bare_remote_external_hooks(tmp_path):
     external_hooks.mkdir()
     marker = tmp_path / "hook-ran"
     hook = external_hooks / "pre-receive"
-    hook.write_text("#!/bin/sh\nprintf ran > %s\n" % marker, encoding="utf-8")
+    hook.write_text(f"#!/bin/sh\nprintf ran > {marker}\n", encoding="utf-8")
     if os.name != "nt":
         hook.chmod(0o700)
     subprocess.run(

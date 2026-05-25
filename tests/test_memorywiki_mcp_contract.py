@@ -8,7 +8,6 @@ from pathlib import Path
 from memorywiki_mcp.server import TOOL_NAMES
 from memorywiki_mcp_contract import build_contract, verify_contract, write_contract
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

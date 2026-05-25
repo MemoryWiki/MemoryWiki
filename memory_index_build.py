@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from memory_system.paths import MemoryScopePaths
 from memory_system.retrieval_index import build_and_write_index
@@ -40,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         root = Path(args.root).expanduser()
         if not root.exists():
-            raise ValueError("Memory root does not exist: %s" % root)
+            raise ValueError(f"Memory root does not exist: {root}")
         store = ScopedMemoryStore(
             MemoryScopePaths.from_root(root, scope=args.scope),
             sanitize_on_write=True,

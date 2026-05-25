@@ -1,3 +1,5 @@
+"""Pure-local chat and compaction adapters that require no external API."""
+
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -14,7 +16,7 @@ class LocalChatClient:
                 break
         reply = (
             "Local memory mode: I can help you inspect, explicitly save, or promote "
-            "memory. Latest input: %s" % sanitize_text(last_user)
+            f"memory. Latest input: {sanitize_text(last_user)}"
         )
         return reply, {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
 
@@ -39,7 +41,7 @@ class LocalCompressor:
         self,
         core_memory_char_limit,
         user_memory_char_limit,
-        timezone="Asia/Shanghai",
+        timezone="UTC",
     ):
         self.core_memory_char_limit = core_memory_char_limit
         self.user_memory_char_limit = user_memory_char_limit
@@ -70,7 +72,7 @@ class LocalCompressor:
                 updated_user + "\n- " + "\n- ".join(preferences[:5])
             ).strip()
 
-        episodic_append = "## %s Compression Snapshot\n\n- Topic: local compaction\n- Key events: %s" % (
+        episodic_append = "## {} Compression Snapshot\n\n- Topic: local compaction\n- Key events: {}".format(
             datetime.now(ZoneInfo(self.timezone)).strftime("%H:%M"),
             "; ".join(goals[:3]) or "No extracted goals",
         )

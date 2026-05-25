@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import argparse
-from datetime import date
 import json
 import os
+from datetime import date
 from pathlib import Path
 
 from memory_system.config import MemoryConfig
 from memory_system.sanitizer import neutralize_instruction_text, sanitize_text
-
 
 MAX_WAKE_FILE_BYTES = 2_000_000
 DEFAULT_CANONICAL_USER_PATH = Path("~/.agent_memory/global/USER.md").expanduser()
@@ -92,13 +91,13 @@ def _read_recent_sessions(
         summary = sanitize_text(str(payload.get("summary", ""))).strip()
         ts = str(payload.get("ts", ""))
         if summary:
-            sessions.append((ts, "- %s: %s" % (session_id, summary)))
+            sessions.append((ts, f"- {session_id}: {summary}"))
     sessions.sort(key=lambda item: item[0], reverse=True)
     return [line for _, line in sessions[:limit]]
 
 
 def _frontmatter_value(text: str, key: str) -> str:
-    prefix = "%s:" % key
+    prefix = f"{key}:"
     for line in text.splitlines():
         if line.startswith(prefix):
             return line.split(":", 1)[1].strip()
@@ -118,7 +117,7 @@ def _read_recent_session_files(root: Path, limit: int = 3) -> list[str]:
             continue
         session_id = _frontmatter_value(text, "id") or path.stem
         title = _frontmatter_value(text, "title") or "Untitled session"
-        sessions.append("- %s: %s" % (sanitize_text(session_id), sanitize_text(title)))
+        sessions.append(f"- {sanitize_text(session_id)}: {sanitize_text(title)}")
         if len(sessions) >= limit:
             break
     return sessions
@@ -204,11 +203,11 @@ def generate_wake_prompt(
         "\n".join(
             [
                 _read_text_if_exists(
-                    global_storage_root / "episodes" / ("%s.md" % today),
+                    global_storage_root / "episodes" / (f"{today}.md"),
                     root=global_storage_root,
                 ),
                 _read_text_if_exists(
-                    project_storage_root / "episodes" / ("%s.md" % today),
+                    project_storage_root / "episodes" / (f"{today}.md"),
                     root=project_storage_root,
                 ),
             ]

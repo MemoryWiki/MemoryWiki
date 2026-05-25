@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
 import hashlib
 import json
 import os
-from pathlib import Path
 import shlex
 import sys
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from memory_crystallize_candidates import QUEUE_NAME
@@ -15,10 +15,9 @@ from memory_feedback import LEDGER_NAME
 from memory_health import run_health
 from memory_lifecycle import run_lifecycle
 from memory_system.models import AuditEntry, ProceduralMemory, SemanticMemory, SourceRef
-from memory_system.paths import MemoryScopePaths
 from memory_system.sanitizer import sanitize_text
 from memory_system.store import ScopedMemoryStore
-
+from memory_system.store_guard import build_scoped_store
 
 MAX_JSONL_BYTES = 2_000_000
 MAX_REVIEW_ROWS = 500
@@ -29,34 +28,15 @@ def _now() -> str:
     return datetime.now().astimezone().isoformat(timespec="seconds")
 
 
-def _safe_store(root: str | Path, scope: str = "project") -> ScopedMemoryStore:
-    path = Path(root).expanduser()
-    if path.exists() and (path.is_symlink() or not path.is_dir()):
-        raise ValueError("Memory root must be a real directory: %s" % path)
-    cursor = path
-    while not cursor.exists() and cursor != cursor.parent:
-        cursor = cursor.parent
-    if cursor.exists() and cursor.is_symlink():
-        raise ValueError("Memory root may not be below a symlink: %s" % cursor)
-    for parent in cursor.parents:
-        if parent.is_symlink():
-            raise ValueError("Memory root may not be below a symlink: %s" % parent)
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(path, scope),
-        sanitize_on_write=True,
-        secure_permissions=True,
-    )
-
-
 def _read_jsonl(path: Path, *, root: Path) -> list[dict[str, Any]]:
     if not path.exists():
         return []
     try:
         path.resolve(strict=False).relative_to(root.resolve(strict=False))
     except ValueError:
-        raise ValueError("Review ledger must stay below memory root: %s" % path)
+        raise ValueError(f"Review ledger must stay below memory root: {path}")
     if path.is_symlink() or not path.is_file():
-        raise ValueError("Review ledger must be a real file: %s" % path)
+        raise ValueError(f"Review ledger must be a real file: {path}")
     flags = os.O_RDONLY
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -64,7 +44,7 @@ def _read_jsonl(path: Path, *, root: Path) -> list[dict[str, Any]]:
     try:
         size = os.fstat(fd).st_size
         if size > MAX_JSONL_BYTES:
-            raise ValueError("Review ledger exceeds safe read limit: %s" % path)
+            raise ValueError(f"Review ledger exceeds safe read limit: {path}")
         raw = os.read(fd, size).decode("utf-8")
     finally:
         os.close(fd)
@@ -135,8 +115,8 @@ def load_golden_candidate_rows(root: str | Path, scope: str) -> list[dict[str, A
 
 
 def _proposal_name(prefix: str, query: str, identifier: str = "") -> str:
-    digest = hashlib.sha1(("%s|%s" % (query, identifier)).encode("utf-8")).hexdigest()[:10]
-    return "%s-%s" % (prefix, digest)
+    digest = hashlib.sha1((f"{query}|{identifier}").encode("utf-8")).hexdigest()[:10]
+    return f"{prefix}-{digest}"
 
 
 def golden_proposals_from_feedback(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -164,7 +144,7 @@ def golden_proposals_from_feedback(rows: list[dict[str, Any]]) -> list[dict[str,
         seen.add(key)
         proposals.append(
             {
-                "name": _proposal_name("feedback-%s" % rating, query, hit_identifier),
+                "name": _proposal_name(f"feedback-{rating}", query, hit_identifier),
                 "query": query,
                 "expected": expected,
                 "status": status,
@@ -181,9 +161,9 @@ def golden_proposals_from_feedback(rows: list[dict[str, Any]]) -> list[dict[str,
 
 def _inbox_id(category: str, scope: str, target: str, summary: str) -> str:
     digest = hashlib.sha1(
-        ("%s|%s|%s|%s" % (category, scope, target, summary)).encode("utf-8")
+        (f"{category}|{scope}|{target}|{summary}").encode("utf-8")
     ).hexdigest()[:12]
-    return "%s-%s" % (category, digest)
+    return f"{category}-{digest}"
 
 
 def _inbox_item(
@@ -232,7 +212,7 @@ def build_review_inbox(
                 scope=str(issue.get("scope", "")),
                 severity=str(issue.get("severity", "info")),
                 status="open",
-                summary="%s: %s" % (issue.get("code", ""), issue.get("message", "")),
+                summary="{}: {}".format(issue.get("code", ""), issue.get("message", "")),
                 action="review health issue and apply an explicit repair if appropriate",
                 source="memory_health",
                 target=str(issue.get("target", "")),
@@ -248,8 +228,7 @@ def build_review_inbox(
                 scope=str(row.get("scope", "")),
                 severity=severity,
                 status="open",
-                summary="%s feedback for query: %s"
-                % (rating or str(row.get("event", "")), row.get("query", "")),
+                summary="{} feedback for query: {}".format(rating or str(row.get("event", "")), row.get("query", "")),
                 action="review feedback; use explicit golden candidate write if it should become eval coverage",
                 source="memory_feedback",
                 target=str(row.get("hit_identifier", "")),
@@ -263,8 +242,7 @@ def build_review_inbox(
                 scope=str(candidate.get("scope", "")),
                 severity="info",
                 status="pending",
-                summary="%s candidate: %s"
-                % (candidate.get("kind", "memory"), candidate.get("title", "")),
+                summary="{} candidate: {}".format(candidate.get("kind", "memory"), candidate.get("title", "")),
                 action="review candidate; apply only with --apply-candidate and --write",
                 source="memory_crystallize_candidates",
                 target=str(candidate.get("id", "")),
@@ -279,8 +257,7 @@ def build_review_inbox(
                 scope=str(proposal.get("scope", "")),
                 severity="warn" if status != "ready" else "info",
                 status=status or "proposed",
-                summary="Golden candidate %s: %s"
-                % (proposal.get("name", ""), proposal.get("query", "")),
+                summary="Golden candidate {}: {}".format(proposal.get("name", ""), proposal.get("query", "")),
                 action=(
                     "fill expected target before adding to golden eval"
                     if status != "ready"
@@ -298,8 +275,7 @@ def build_review_inbox(
                 scope=str(proposal.get("scope", "")),
                 severity=str(proposal.get("severity", "info")),
                 status="dry-run",
-                summary="%s for %s"
-                % (proposal.get("action", ""), proposal.get("target", "")),
+                summary="{} for {}".format(proposal.get("action", ""), proposal.get("target", "")),
                 action=str(proposal.get("action", "")),
                 source="memory_review",
                 target=str(proposal.get("target", "")),
@@ -319,7 +295,7 @@ def build_review_inbox(
                 scope=str(proposal.get("scope", "")),
                 severity=severity,
                 status="proposed",
-                summary="%s for %s" % (proposal.get("code", ""), target),
+                summary="{} for {}".format(proposal.get("code", ""), target),
                 action=str(proposal.get("action", "")),
                 source="memory_lifecycle",
                 target=target,
@@ -340,10 +316,10 @@ def build_review_inbox(
 
 def _assert_safe_pending_file(root: Path, filename: str) -> Path:
     if "/" in filename or "\\" in filename or filename in {"", ".", ".."}:
-        raise ValueError("Invalid pending filename: %s" % filename)
+        raise ValueError(f"Invalid pending filename: {filename}")
     pending = root / "_pending"
     if pending.exists() and (pending.is_symlink() or not pending.is_dir()):
-        raise ValueError("Pending directory must be a real directory: %s" % pending)
+        raise ValueError(f"Pending directory must be a real directory: {pending}")
     cursor = pending
     checked = []
     while cursor != cursor.parent:
@@ -354,20 +330,20 @@ def _assert_safe_pending_file(root: Path, filename: str) -> Path:
     root_resolved = root.resolve(strict=False)
     for item in checked:
         if item.exists() and item.is_symlink():
-            raise ValueError("Pending path may not include symlinks: %s" % item)
+            raise ValueError(f"Pending path may not include symlinks: {item}")
         try:
             item.resolve(strict=False).relative_to(root_resolved)
         except ValueError:
-            raise ValueError("Pending path must stay below memory root: %s" % pending)
+            raise ValueError(f"Pending path must stay below memory root: {pending}")
     return pending / filename
 
 
 def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
     if path.exists() and (path.is_symlink() or not path.is_file()):
-        raise ValueError("Review write target must be a real file: %s" % path)
+        raise ValueError(f"Review write target must be a real file: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.parent.is_symlink() or not path.parent.is_dir():
-        raise ValueError("Review write directory must be a real directory: %s" % path.parent)
+        raise ValueError(f"Review write directory must be a real directory: {path.parent}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_APPEND
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -416,7 +392,7 @@ def write_golden_candidates_to_pending(
         if root is None:
             skipped += len(scope_proposals)
             continue
-        store = _safe_store(root, scope)
+        store = build_scoped_store(root, scope=scope)
         root = store.paths.root
         path = _assert_safe_pending_file(root, GOLDEN_CANDIDATES_NAME)
         existing_rows = _read_jsonl(path, root=root)
@@ -482,7 +458,7 @@ def _append_golden_lifecycle_audit(
     details: dict[str, Any] | None = None,
     now: str | None = None,
 ) -> None:
-    store = _safe_store(root, scope)
+    store = build_scoped_store(root, scope=scope)
     store.append_audit(
         AuditEntry(
             ts=now or _now(),
@@ -652,15 +628,15 @@ def golden_candidate_action_guidance(
 def _safe_registry_path(path: str | Path) -> Path:
     registry = Path(path).expanduser()
     if registry.exists() and (registry.is_symlink() or not registry.is_file()):
-        raise ValueError("Golden case registry must be a real file: %s" % registry)
+        raise ValueError(f"Golden case registry must be a real file: {registry}")
     cursor = registry.parent
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.exists() and cursor.is_symlink():
-        raise ValueError("Golden case registry may not be below a symlink: %s" % cursor)
+        raise ValueError(f"Golden case registry may not be below a symlink: {cursor}")
     for parent in cursor.parents:
         if parent.is_symlink():
-            raise ValueError("Golden case registry may not be below a symlink: %s" % parent)
+            raise ValueError(f"Golden case registry may not be below a symlink: {parent}")
     return registry
 
 
@@ -683,10 +659,10 @@ def _read_case_registry(path: Path) -> dict[str, Any]:
 def _write_case_registry(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.parent.is_symlink() or not path.parent.is_dir():
-        raise ValueError("Golden case registry directory must be real: %s" % path.parent)
+        raise ValueError(f"Golden case registry directory must be real: {path.parent}")
     tmp = path.with_name(path.name + ".tmp")
     if tmp.exists() and tmp.is_symlink():
-        raise ValueError("Golden case registry temp path may not be a symlink: %s" % tmp)
+        raise ValueError(f"Golden case registry temp path may not be a symlink: {tmp}")
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -735,7 +711,7 @@ def _find_golden_candidate(
                 matches.append(row)
     matches = [row for row in matches if _candidate_identity(row) not in promoted]
     if not matches:
-        raise ValueError("Golden eval candidate not found: %s" % candidate_name)
+        raise ValueError(f"Golden eval candidate not found: {candidate_name}")
     return matches[-1]
 
 
@@ -780,7 +756,7 @@ def fill_golden_candidate_expected(
         return payload
     candidate_scope = str(candidate.get("scope") or "project")
     root = Path(global_root if candidate_scope == "global" else project_root).expanduser()
-    store = _safe_store(root, candidate_scope)
+    store = build_scoped_store(root, scope=candidate_scope)
     pending_path = _assert_safe_pending_file(store.paths.root, GOLDEN_CANDIDATES_NAME)
     _append_jsonl(pending_path, _clean_json(updated))
     _append_golden_lifecycle_audit(
@@ -828,7 +804,7 @@ def reject_golden_candidate(
     timestamp = now or _now()
     candidate_scope = str(candidate.get("scope") or "project")
     root = Path(global_root if candidate_scope == "global" else project_root).expanduser()
-    store = _safe_store(root, candidate_scope)
+    store = build_scoped_store(root, scope=candidate_scope)
     pending_path = _assert_safe_pending_file(store.paths.root, GOLDEN_CANDIDATES_NAME)
     _append_jsonl(
         pending_path,
@@ -877,7 +853,7 @@ def promote_golden_candidate(
     )
     expected = _candidate_expected(candidate)
     if candidate.get("status") != "ready" or not expected:
-        raise ValueError("Golden eval candidate is not ready: %s" % candidate_name)
+        raise ValueError(f"Golden eval candidate is not ready: {candidate_name}")
     registry = _safe_registry_path(registry_path)
     case = _case_from_golden_candidate(candidate)
     project_key = str(Path(project_root).expanduser().resolve())
@@ -899,7 +875,7 @@ def promote_golden_candidate(
     else:
         cases = registry_payload["projects"].setdefault(section, [])
         if not isinstance(cases, list):
-            raise ValueError("Project registry entry must be a list: %s" % section)
+            raise ValueError(f"Project registry entry must be a list: {section}")
     if not any(item.get("name") == case["name"] for item in cases if isinstance(item, dict)):
         cases.append(case)
         _write_case_registry(registry, registry_payload)
@@ -908,7 +884,7 @@ def promote_golden_candidate(
         payload["written"] = False
     candidate_scope = str(candidate.get("scope") or "project")
     root = Path(global_root if candidate_scope == "global" else project_root).expanduser()
-    store = _safe_store(root, candidate_scope)
+    store = build_scoped_store(root, scope=candidate_scope)
     pending_path = _assert_safe_pending_file(store.paths.root, GOLDEN_CANDIDATES_NAME)
     _append_jsonl(
         pending_path,
@@ -979,7 +955,7 @@ def _candidate_by_id(store: ScopedMemoryStore, candidate_id: str) -> dict[str, A
     rows = load_candidate_rows(store.paths.root, store.paths.scope)
     matches = [row for row in rows if str(row.get("id", "")) == candidate_id]
     if not matches:
-        raise ValueError("Candidate not found: %s" % candidate_id)
+        raise ValueError(f"Candidate not found: {candidate_id}")
     return matches[-1]
 
 
@@ -1008,22 +984,22 @@ def apply_candidate(
     replace: bool = False,
     now: str | None = None,
 ) -> dict[str, Any]:
-    store = _safe_store(root, "project")
+    store = build_scoped_store(root, scope="project")
     candidate = _candidate_by_id(store, candidate_id)
     kind = sanitize_text(str(candidate.get("kind", "semantic"))).strip()
     if kind not in {"semantic", "procedure"}:
-        raise ValueError("Unsupported candidate kind: %s" % kind)
+        raise ValueError(f"Unsupported candidate kind: {kind}")
     timestamp = now or _now()
     title = sanitize_text(str(candidate.get("title", candidate_id))).strip() or candidate_id
     answer = sanitize_text(str(candidate.get("answer", ""))).strip()
     if not answer:
-        raise ValueError("Candidate has no answer/content: %s" % candidate_id)
+        raise ValueError(f"Candidate has no answer/content: {candidate_id}")
     source_ref = _source_ref_from_candidate(candidate)
-    target_path = "%s/%s.md" % ("semantic" if kind == "semantic" else "procedures", candidate_id)
+    target_path = "{}/{}.md".format("semantic" if kind == "semantic" else "procedures", candidate_id)
     if kind == "semantic" and store.read_semantic_memory(candidate_id) is not None and not replace:
-        raise ValueError("semantic memory already exists; use --replace: %s" % candidate_id)
+        raise ValueError(f"semantic memory already exists; use --replace: {candidate_id}")
     if kind == "procedure" and store.read_procedural_memory(candidate_id) is not None and not replace:
-        raise ValueError("procedure already exists; use --replace: %s" % candidate_id)
+        raise ValueError(f"procedure already exists; use --replace: {candidate_id}")
     if not write:
         return {
             "dry_run": True,
@@ -1242,20 +1218,19 @@ def render_human(payload: dict[str, Any]) -> str:
     lines = [
         "# MemoryWiki Memory Review",
         "",
-        "Status: %s" % payload["status"],
-        "Health issues: %s" % payload["health_issue_count"],
-        "Lifecycle proposals: %s" % payload["lifecycle_proposal_count"],
-        "Feedback rows: %s" % payload["feedback_count"],
-        "Pending candidates: %s" % payload["pending_candidate_count"],
-        "Golden proposals: %s" % len(payload["golden_proposals"]),
-        "Golden candidate backlog: %s ready / %s total"
-        % (
+        "Status: {}".format(payload["status"]),
+        "Health issues: {}".format(payload["health_issue_count"]),
+        "Lifecycle proposals: {}".format(payload["lifecycle_proposal_count"]),
+        "Feedback rows: {}".format(payload["feedback_count"]),
+        "Pending candidates: {}".format(payload["pending_candidate_count"]),
+        "Golden proposals: {}".format(len(payload["golden_proposals"])),
+        "Golden candidate backlog: {} ready / {} total".format(
             payload["golden_candidate_backlog"]["ready_count"],
             payload["golden_candidate_backlog"]["candidate_count"],
         ),
-        "Review inbox: %s" % payload["review_inbox_count"],
-        "Golden candidate writes: %s" % payload["golden_candidate_write"]["written"],
-        "Repair proposals: %s" % len(payload["repair_proposals"]),
+        "Review inbox: {}".format(payload["review_inbox_count"]),
+        "Golden candidate writes: {}".format(payload["golden_candidate_write"]["written"]),
+        "Repair proposals: {}".format(len(payload["repair_proposals"])),
         "",
     ]
     if payload["review_inbox"]:
@@ -1293,7 +1268,7 @@ def render_human(payload: dict[str, Any]) -> str:
             lines.append("- Promote {name}: {command}".format(**item))
         for item in actions.get("needs_expected", []):
             lines.append("- Fill {name}: {command}".format(**item))
-        lines.append("- Reject template: %s" % actions.get("reject_template", ""))
+        lines.append("- Reject template: {}".format(actions.get("reject_template", "")))
         lines.append("")
     if payload["repair_proposals"]:
         lines.append("## Health Repair Proposals")

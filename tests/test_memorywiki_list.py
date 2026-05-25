@@ -8,7 +8,6 @@ from memory_system.paths import MemoryScopePaths
 from memory_system.store import ScopedMemoryStore
 from memorywiki_list import list_memories
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

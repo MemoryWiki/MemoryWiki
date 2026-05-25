@@ -1,21 +1,23 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import dataclass
 import hashlib
 import json
 import os
-from pathlib import Path
 import shutil
 import subprocess
 import sys
-from typing import Any
 import zipfile
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 from memorywiki_release_manifest import (
     _latest_backup_bundle,
     _safe_file,
     _sha256_file,
+)
+from memorywiki_release_manifest import (
     write_manifest as write_release_manifest,
 )
 
@@ -50,10 +52,10 @@ def _sha256_bytes(data: bytes) -> str:
 def _safe_skill_source_files(source_dir: str | Path) -> dict[str, dict[str, Any]]:
     source = Path(source_dir).expanduser()
     if not source.exists() or source.is_symlink() or not source.is_dir():
-        raise ValueError("Skill source must be a real directory: %s" % source)
+        raise ValueError(f"Skill source must be a real directory: {source}")
     for ancestor in source.parents:
         if ancestor.is_symlink():
-            raise ValueError("Skill source may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"Skill source may not be below a symlink: {ancestor}")
     rows: dict[str, dict[str, Any]] = {}
     for current, dirs, files in os.walk(source):
         current_path = Path(current)
@@ -68,18 +70,18 @@ def _safe_skill_source_files(source_dir: str | Path) -> dict[str, dict[str, Any]
         for filename in sorted(files):
             path = current_path / filename
             if path.is_symlink():
-                raise ValueError("Skill source may not contain symlinked files: %s" % path)
+                raise ValueError(f"Skill source may not contain symlinked files: {path}")
             if not path.is_file():
                 continue
             if path.suffix in SKILL_SOURCE_SKIP_SUFFIXES:
                 continue
             if path.stat().st_size > MAX_SKILL_ARCHIVE_BYTES:
-                raise ValueError("Skill source file exceeds safe hash limit: %s" % path)
+                raise ValueError(f"Skill source file exceeds safe hash limit: {path}")
             rel = path.relative_to(source).as_posix()
             data = path.read_bytes()
             rows[rel] = {"bytes": len(data), "sha256": _sha256_bytes(data)}
     if not rows:
-        raise ValueError("Skill source contains no files: %s" % source)
+        raise ValueError(f"Skill source contains no files: {source}")
     return rows
 
 
@@ -90,12 +92,12 @@ def _is_zip_symlink(info: zipfile.ZipInfo) -> bool:
 def _safe_archive_rel(name: str, top_level: str) -> str | None:
     normalized = name.replace("\\", "/")
     if normalized.startswith("/") or normalized.startswith("../") or normalized == "..":
-        raise ValueError("Unsafe skill archive entry: %s" % name)
+        raise ValueError(f"Unsafe skill archive entry: {name}")
     parts = [part for part in normalized.split("/") if part]
     if not parts or any(part in {".", ".."} for part in parts):
-        raise ValueError("Unsafe skill archive entry: %s" % name)
+        raise ValueError(f"Unsafe skill archive entry: {name}")
     if parts[0] != top_level:
-        raise ValueError("Skill archive entry must stay under %s/: %s" % (top_level, name))
+        raise ValueError(f"Skill archive entry must stay under {top_level}/: {name}")
     if len(parts) == 1:
         return None
     return "/".join(parts[1:])
@@ -124,9 +126,9 @@ def validate_skill_archive(skill_archive: str | Path, skill_source_dir: str | Pa
     archive = Path(skill_archive).expanduser()
     source = Path(skill_source_dir).expanduser()
     if not archive.exists() or archive.is_symlink() or not archive.is_file():
-        raise ValueError("Skill archive must be a real file: %s" % archive)
+        raise ValueError(f"Skill archive must be a real file: {archive}")
     if archive.stat().st_size > MAX_SKILL_ARCHIVE_BYTES:
-        raise ValueError("Skill archive exceeds safe validation limit: %s" % archive)
+        raise ValueError(f"Skill archive exceeds safe validation limit: {archive}")
     expected = _safe_skill_source_files(source)
     actual: dict[str, dict[str, Any]] = {}
     top_level = source.name
@@ -134,12 +136,12 @@ def validate_skill_archive(skill_archive: str | Path, skill_source_dir: str | Pa
         total_uncompressed = 0
         for info in handle.infolist():
             if _is_zip_symlink(info):
-                raise ValueError("Skill archive may not contain symlinks: %s" % info.filename)
+                raise ValueError(f"Skill archive may not contain symlinks: {info.filename}")
             rel = _safe_archive_rel(info.filename, top_level)
             if rel is None or info.is_dir():
                 continue
             if rel in actual:
-                raise ValueError("Skill archive contains duplicate file: %s" % rel)
+                raise ValueError(f"Skill archive contains duplicate file: {rel}")
             total_uncompressed += info.file_size
             if info.file_size > MAX_SKILL_ARCHIVE_BYTES or total_uncompressed > MAX_SKILL_ARCHIVE_BYTES:
                 raise ValueError("Skill archive uncompressed content exceeds safe validation limit")
@@ -158,8 +160,7 @@ def validate_skill_archive(skill_archive: str | Path, skill_source_dir: str | Pa
     )
     if missing or extra or mismatched:
         raise ValueError(
-            "Skill archive/source mismatch: missing=%s extra=%s mismatch=%s"
-            % (missing, extra, mismatched)
+            f"Skill archive/source mismatch: missing={missing} extra={extra} mismatch={mismatched}"
         )
     return {
         "archive": str(archive.resolve()),
@@ -175,18 +176,18 @@ def _stage_release_artifact(source: str | Path | None, manifest_path: Path) -> P
     safe_source = _safe_file(source, "Release artifact")
     parent = manifest_path.expanduser().parent
     if not parent.exists() or parent.is_symlink() or not parent.is_dir():
-        raise ValueError("Manifest output parent must be a real directory: %s" % parent)
+        raise ValueError(f"Manifest output parent must be a real directory: {parent}")
     for ancestor in parent.parents:
         if ancestor.is_symlink():
-            raise ValueError("Manifest output parent may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"Manifest output parent may not be below a symlink: {ancestor}")
     destination = (parent / safe_source.name).resolve()
     if destination == safe_source:
         return destination
     if destination.exists():
         if destination.is_symlink() or not destination.is_file():
-            raise ValueError("Release artifact destination is unsafe: %s" % destination)
+            raise ValueError(f"Release artifact destination is unsafe: {destination}")
         if destination.stat().st_size != safe_source.stat().st_size or _sha256_file(destination) != _sha256_file(safe_source):
-            raise ValueError("Release artifact destination already exists with different content: %s" % destination)
+            raise ValueError(f"Release artifact destination already exists with different content: {destination}")
         return destination
     shutil.copy2(safe_source, destination)
     return destination
@@ -832,17 +833,17 @@ def run_release_check(
 
 
 def render_human(payload: dict[str, Any]) -> str:
-    lines = ["# MemoryWiki Release Check", "", "Status: %s" % payload["status"], ""]
+    lines = ["# MemoryWiki Release Check", "", "Status: {}".format(payload["status"]), ""]
     for result in payload["results"]:
         marker = "PASS" if result["returncode"] == 0 else "FAIL"
         required = "required" if result["required"] else "optional"
-        lines.append("- [%s] %s (%s)" % (marker, result["name"], required))
+        lines.append("- [{}] {} ({})".format(marker, result["name"], required))
     if payload["required_failures"]:
         lines.append("")
-        lines.append("Required failures: %s" % ", ".join(payload["required_failures"]))
+        lines.append("Required failures: {}".format(", ".join(payload["required_failures"])))
     if payload["optional_failures"]:
         lines.append("")
-        lines.append("Optional failures: %s" % ", ".join(payload["optional_failures"]))
+        lines.append("Optional failures: {}".format(", ".join(payload["optional_failures"])))
     return "\n".join(lines) + "\n"
 
 

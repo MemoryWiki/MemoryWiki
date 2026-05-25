@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 import shlex
 import sys
-
+from pathlib import Path
 
 AGENTS_FILENAME = "AGENTS.md"
 
@@ -41,7 +40,7 @@ AGENTS.md is not the long-term memory store; it is the lightweight startup and o
 if [ -z "${{MEMORY_SYSTEM_HOME:-}}" ]; then
   export MEMORY_SYSTEM_HOME={memory_home_shell}
 fi
-export MEMORY_TIMEZONE="${{MEMORY_TIMEZONE:-Asia/Shanghai}}"
+export MEMORY_TIMEZONE="${{MEMORY_TIMEZONE:-UTC}}"
 ```
 
 2. Check project/global retrieval sidecars in read-only mode:
@@ -300,16 +299,16 @@ Start with AGENTS.md, call MemoryWiki, then work. End by asking whether to save 
 
 def _assert_safe_project_root(project_root: Path) -> None:
     if not project_root.exists():
-        raise FileNotFoundError("Project root does not exist: %s" % project_root)
+        raise FileNotFoundError(f"Project root does not exist: {project_root}")
     if project_root.is_symlink() or not project_root.is_dir():
-        raise ValueError("Project root must be a real directory: %s" % project_root)
+        raise ValueError(f"Project root must be a real directory: {project_root}")
 
 
 def _write_text_no_follow(path: Path, text: str, force: bool) -> None:
     if path.is_symlink():
-        raise ValueError("AGENTS.md may not be a symlink: %s" % path)
+        raise ValueError(f"AGENTS.md may not be a symlink: {path}")
     if path.exists() and not force:
-        raise FileExistsError("%s already exists; use --force to replace it" % path)
+        raise FileExistsError(f"{path} already exists; use --force to replace it")
     flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -317,7 +316,7 @@ def _write_text_no_follow(path: Path, text: str, force: bool) -> None:
         fd = os.open(path, flags, 0o644)
     except OSError:
         if path.is_symlink():
-            raise ValueError("AGENTS.md may not be a symlink: %s" % path)
+            raise ValueError(f"AGENTS.md may not be a symlink: {path}")
         raise
     try:
         os.write(fd, text.encode("utf-8"))
@@ -377,7 +376,7 @@ def main(argv: list[str] | None = None) -> int:
         except (FileExistsError, FileNotFoundError, ValueError) as exc:
             print(str(exc), file=sys.stderr)
             return 2
-        print("Wrote %s" % path)
+        print(f"Wrote {path}")
         return 0
     print(
         render_agents_md(

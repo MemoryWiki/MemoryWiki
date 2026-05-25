@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
-from datetime import datetime
 import html
 import json
 import os
-from pathlib import Path
 import re
 import sys
+from dataclasses import asdict
+from datetime import datetime
+from pathlib import Path
 
 from memory_system.paths import MemoryScopePaths
 from memory_system.sanitizer import sanitize_text
 from memory_system.store import ScopedMemoryStore
-
 
 EVENT_HANDLER_RE = re.compile(r"\bon([a-z0-9_-]+)\s*=", re.IGNORECASE)
 
@@ -23,7 +22,7 @@ def safe_store(root: Path, scope: str) -> ScopedMemoryStore | None:
     if not root.exists():
         return None
     if root.is_symlink() or not root.is_dir():
-        raise ValueError("Memory root must be a real directory: %s" % root)
+        raise ValueError(f"Memory root must be a real directory: {root}")
     return ScopedMemoryStore(
         MemoryScopePaths.from_root(root, scope=scope),
         sanitize_on_write=True,
@@ -59,7 +58,7 @@ def build_events_for_store(store: ScopedMemoryStore, scope: str) -> list[dict]:
                 "source_refs": [
                     {
                         "kind": "session",
-                        "path": "sessions/%s.md" % session.id,
+                        "path": f"sessions/{session.id}.md",
                         "identifier": session.id,
                         "excerpt": None,
                     }
@@ -103,12 +102,12 @@ def build_events_for_store(store: ScopedMemoryStore, scope: str) -> list[dict]:
                 "scope": scope,
                 "kind": "episode",
                 "id": episode.date,
-                "title": "Episode %s" % episode.date,
+                "title": f"Episode {episode.date}",
                 "summary": preview(episode.body),
                 "source_refs": [
                     {
                         "kind": "episode",
-                        "path": "episodes/%s.md" % episode.date,
+                        "path": f"episodes/{episode.date}.md",
                         "identifier": episode.date,
                         "excerpt": None,
                     }
@@ -151,8 +150,8 @@ def build_events_for_store(store: ScopedMemoryStore, scope: str) -> list[dict]:
                 "ts": entry.ts,
                 "scope": scope,
                 "kind": "audit",
-                "id": "%s:%s" % (entry.target_kind, entry.target_id),
-                "title": "%s %s" % (entry.action, entry.target_kind),
+                "id": f"{entry.target_kind}:{entry.target_id}",
+                "title": f"{entry.action} {entry.target_kind}",
                 "summary": preview(entry.reason),
                 "dry_run": entry.dry_run,
                 "details": entry.details,
@@ -187,20 +186,20 @@ def build_timeline(args) -> dict:
 
 def escape_html_text(text) -> str:
     escaped = html.escape(str(text), quote=True)
-    return EVENT_HANDLER_RE.sub(lambda match: "on-%s=" % match.group(1), escaped)
+    return EVENT_HANDLER_RE.sub(lambda match: f"on-{match.group(1)}=", escaped)
 
 
 def escape_markdown_text(text) -> str:
     escaped = html.escape(str(text), quote=False)
-    escaped = EVENT_HANDLER_RE.sub(lambda match: "on-%s=" % match.group(1), escaped)
+    escaped = EVENT_HANDLER_RE.sub(lambda match: f"on-{match.group(1)}=", escaped)
     return escaped.replace("|", "\\|")
 
 
 def _render_list(title: str, values: list[str]) -> str:
     if not values:
         return ""
-    items = "".join("<li>%s</li>" % escape_html_text(value) for value in values)
-    return "<h3>%s</h3><ul>%s</ul>" % (escape_html_text(title), items)
+    items = "".join(f"<li>{escape_html_text(value)}</li>" for value in values)
+    return f"<h3>{escape_html_text(title)}</h3><ul>{items}</ul>"
 
 
 def render_replay_details(event: dict) -> str:
@@ -211,12 +210,12 @@ def render_replay_details(event: dict) -> str:
     body = event.get("body") or ""
     if body:
         detail_parts.append(
-            "<h3>Replay</h3><pre>%s</pre>" % escape_html_text(body)
+            f"<h3>Replay</h3><pre>{escape_html_text(body)}</pre>"
         )
     body_html = "".join(part for part in detail_parts if part)
     if not body_html:
         return ""
-    return "<details><summary>Replay</summary>%s</details>" % body_html
+    return f"<details><summary>Replay</summary>{body_html}</details>"
 
 
 def render_markdown(payload: dict) -> str:
@@ -226,8 +225,7 @@ def render_markdown(payload: dict) -> str:
         return "\n".join(lines) + "\n"
     for event in payload["events"]:
         lines.append(
-            "- **%s** `%s/%s` %s: %s"
-            % (
+            "- **{}** `{}/{}` {}: {}".format(
                 escape_markdown_text(event.get("ts", "")),
                 escape_markdown_text(event.get("scope", "")),
                 escape_markdown_text(event.get("kind", "")),
@@ -243,18 +241,17 @@ def render_html(payload: dict) -> str:
     for event in payload["events"]:
         refs = event.get("source_refs") or []
         source_text = ", ".join(
-            "%s:%s" % (ref.get("kind", ""), ref.get("identifier") or ref.get("path", ""))
+            "{}:{}".format(ref.get("kind", ""), ref.get("identifier") or ref.get("path", ""))
             for ref in refs[:3]
         )
         items.append(
             "<article class=\"event\">"
-            "<div class=\"meta\">%s · %s/%s</div>"
-            "<h2>%s</h2>"
-            "<p>%s</p>"
-            "%s"
-            "<footer>%s</footer>"
-            "</article>"
-            % (
+            "<div class=\"meta\">{} · {}/{}</div>"
+            "<h2>{}</h2>"
+            "<p>{}</p>"
+            "{}"
+            "<footer>{}</footer>"
+            "</article>".format(
                 escape_html_text(event.get("ts", "")),
                 escape_html_text(event.get("scope", "")),
                 escape_html_text(event.get("kind", "")),
@@ -274,19 +271,18 @@ def render_html(payload: dict) -> str:
         ".meta,footer{color:#6f6254;font-size:.9rem}h2{margin:.2rem 0 .5rem}"
         "details{margin:.8rem 0;padding:.7rem;border-radius:10px;background:#f4ead8}"
         "summary{cursor:pointer;font-weight:700}pre{white-space:pre-wrap;overflow:auto}"
-        "</style></head><body><h1>Memory Timeline</h1>%s</body></html>\n"
-        % body
+        f"</style></head><body><h1>Memory Timeline</h1>{body}</body></html>\n"
     )
 
 
 def assert_safe_output(path: Path) -> None:
     if path.exists() and path.is_symlink():
-        raise ValueError("Output path may not be a symlink: %s" % path)
+        raise ValueError(f"Output path may not be a symlink: {path}")
     parent = path.parent
     for ancestor in (parent, *parent.parents):
         if ancestor.exists() and ancestor.is_symlink():
             raise ValueError(
-                "Output path may not be below a symlinked directory: %s" % ancestor
+                f"Output path may not be below a symlinked directory: {ancestor}"
             )
     parent.mkdir(parents=True, exist_ok=True)
 
@@ -299,7 +295,7 @@ def write_text_no_follow(path: Path, text: str) -> None:
         fd = os.open(path, flags, 0o600)
     except OSError:
         if path.is_symlink():
-            raise ValueError("Output path may not be a symlink: %s" % path)
+            raise ValueError(f"Output path may not be a symlink: {path}")
         raise
     try:
         os.write(fd, text.encode("utf-8"))

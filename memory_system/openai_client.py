@@ -1,3 +1,5 @@
+"""Optional OpenAI-backed chat adapter for MemoryWiki compaction flows."""
+
 from __future__ import annotations
 
 import json

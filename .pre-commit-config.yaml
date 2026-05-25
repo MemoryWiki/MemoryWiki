@@ -3,13 +3,24 @@ repos:
     hooks:
       - id: ruff-check
         name: ruff check
-        entry: python -m ruff check . --fix
+        entry: python3 -m ruff check .
         language: system
         pass_filenames: false
         types_or: [python, pyi]
       - id: mypy-memorywiki-mcp
         name: mypy MemoryWiki MCP surface
-        entry: python -m mypy memorywiki_list.py memorywiki_mcp/schema.py memorywiki_mcp/server.py memorywiki_mcp_contract.py --follow-imports=silent
+        entry: python3 -m mypy memorywiki_list.py memorywiki_mcp/schema.py memorywiki_mcp/server.py memorywiki_mcp_contract.py --follow-imports=silent
         language: system
         pass_filenames: false
         types_or: [python, pyi]
+      - id: bandit-memorywiki-core
+        name: bandit MemoryWiki core
+        entry: python3 -m bandit -q -r memory_system memorywiki_mcp -x tests
+        language: system
+        pass_filenames: false
+        types_or: [python, pyi]
+      - id: pip-audit-project
+        name: pip-audit project dependencies
+        entry: python3 -m pip_audit . --progress-spinner off
+        language: system
+        pass_filenames: false

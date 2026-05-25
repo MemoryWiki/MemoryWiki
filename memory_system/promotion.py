@@ -1,7 +1,8 @@
+"""Promotion helpers for copying stable project facts into global memory."""
+
 import re
 
 from memory_system.sanitizer import looks_instruction_shaped
-
 
 SOURCE_COMMENT_RE = re.compile(r"\s*<!--\s*source:\s*[^>]+-->\s*$", re.IGNORECASE)
 
@@ -63,7 +64,7 @@ class PromotionManager:
                 continue
             if looks_instruction_shaped(stripped):
                 continue
-            promoted = "%s  <!-- source: %s -->" % (stripped, self.source_project)
+            promoted = f"{stripped}  <!-- source: {self.source_project} -->"
             dedupe_key = self._dedupe_key(stripped)
             if dedupe_key not in existing:
                 merged_lines.append(promoted)

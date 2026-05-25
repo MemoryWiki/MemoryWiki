@@ -3,14 +3,22 @@ from __future__ import annotations
 import builtins
 import importlib.util
 import os
-from pathlib import Path
 import subprocess
 import sys
+import types
+from pathlib import Path
 
 import pytest
 
-from memorywiki_mcp.server import TOOL_NAMES, create_server, run_server, tool_specs, validate_backend
-
+from memorywiki_mcp.server import (
+    TOOL_NAMES,
+    _allow_non_loopback_http,
+    _is_loopback_host,
+    create_server,
+    run_server,
+    tool_specs,
+    validate_backend,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -70,6 +78,36 @@ def test_create_server_fails_gracefully_when_mcp_extra_is_missing(monkeypatch):
         create_server()
 
 
+def test_create_server_registers_stable_tool_contract(monkeypatch):
+    registered = []
+
+    class FakeFastMCP:
+        def __init__(self, name, json_response):
+            self.name = name
+            self.json_response = json_response
+
+        def tool(self):
+            def decorator(fn):
+                registered.append(fn.__name__)
+                return fn
+
+            return decorator
+
+    mcp_module = types.ModuleType("mcp")
+    server_module = types.ModuleType("mcp.server")
+    fastmcp_module = types.ModuleType("mcp.server.fastmcp")
+    fastmcp_module.FastMCP = FakeFastMCP
+    monkeypatch.setitem(sys.modules, "mcp", mcp_module)
+    monkeypatch.setitem(sys.modules, "mcp.server", server_module)
+    monkeypatch.setitem(sys.modules, "mcp.server.fastmcp", fastmcp_module)
+
+    server = create_server()
+
+    assert server.name == "MemoryWiki Memory"
+    assert server.json_response is True
+    assert tuple(registered) == TOOL_NAMES
+
+
 def test_cli_handles_installed_or_missing_mcp_extra_cleanly():
     env = dict(os.environ)
     env["PYTHONPATH"] = "."
@@ -98,6 +136,21 @@ def test_cli_handles_installed_or_missing_mcp_extra_cleanly():
 def test_streamable_http_refuses_non_loopback_host_before_server_start():
     with pytest.raises(ValueError, match="non-loopback"):
         run_server(transport="streamable-http", host="0.0.0.0")
+
+
+def test_loopback_helper_accepts_localhost_and_loopback_ips():
+    assert _is_loopback_host("localhost") is True
+    assert _is_loopback_host("127.0.0.1") is True
+    assert _is_loopback_host("::1") is True
+    assert _is_loopback_host("0.0.0.0") is False
+    assert _is_loopback_host("example.com") is False
+
+
+def test_non_loopback_http_gate_is_opt_in(monkeypatch):
+    monkeypatch.delenv("MEMORY_MCP_ALLOW_HTTP_NON_LOOPBACK", raising=False)
+    assert _allow_non_loopback_http() is False
+    monkeypatch.setenv("MEMORY_MCP_ALLOW_HTTP_NON_LOOPBACK", "true")
+    assert _allow_non_loopback_http() is True
 
 
 def test_streamable_http_non_loopback_requires_explicit_unsafe_gate(monkeypatch):

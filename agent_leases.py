@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
-from datetime import datetime, timedelta
 import json
 import os
-from pathlib import Path
 import sys
 import uuid
+from contextlib import contextmanager
+from datetime import datetime, timedelta
+from pathlib import Path
 
 try:
     import fcntl
@@ -37,25 +37,25 @@ def _plus_seconds(value: str, seconds: int) -> str:
 def _safe_root(root: str | Path) -> Path:
     path = Path(root).expanduser()
     if path.exists() and (path.is_symlink() or not path.is_dir()):
-        raise ValueError("Memory root must be a real directory: %s" % path)
+        raise ValueError(f"Memory root must be a real directory: {path}")
     cursor = path
     while not cursor.exists() and cursor != cursor.parent:
         cursor = cursor.parent
     if cursor.is_symlink():
-        raise ValueError("Memory root may not be below a symlink: %s" % cursor)
+        raise ValueError(f"Memory root may not be below a symlink: {cursor}")
     for ancestor in cursor.parents:
         if ancestor.is_symlink():
-            raise ValueError("Memory root may not be below a symlink: %s" % ancestor)
+            raise ValueError(f"Memory root may not be below a symlink: {ancestor}")
     path.mkdir(parents=True, exist_ok=True)
     if path.is_symlink():
-        raise ValueError("Memory root must be a real directory: %s" % path)
+        raise ValueError(f"Memory root must be a real directory: {path}")
     return path
 
 
 def _safe_ledger(root: Path) -> Path:
     directory = root / "agent_slots"
     if directory.exists() and (directory.is_symlink() or not directory.is_dir()):
-        raise ValueError("Agent slots path must be a real directory: %s" % directory)
+        raise ValueError(f"Agent slots path must be a real directory: {directory}")
     directory.mkdir(parents=True, exist_ok=True)
     return directory / "leases.jsonl"
 
@@ -65,7 +65,7 @@ def _lease_lock(root: Path):
     ledger = _safe_ledger(root)
     lock_path = ledger.parent / "leases.lock"
     if lock_path.exists() and lock_path.is_symlink():
-        raise ValueError("Lease lock may not be a symlink: %s" % lock_path)
+        raise ValueError(f"Lease lock may not be a symlink: {lock_path}")
     flags = os.O_CREAT | os.O_RDWR
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -104,7 +104,7 @@ def _append_record(root: Path, record: dict) -> None:
         fd = os.open(ledger, flags, 0o600)
     except OSError:
         if ledger.is_symlink():
-            raise ValueError("Lease ledger may not be a symlink: %s" % ledger)
+            raise ValueError(f"Lease ledger may not be a symlink: {ledger}")
         raise
     try:
         os.write(fd, (json.dumps(record, ensure_ascii=False) + "\n").encode("utf-8"))
@@ -120,7 +120,7 @@ def _read_records(root: Path) -> list[dict]:
     if not ledger.exists():
         return []
     if ledger.is_symlink():
-        raise ValueError("Lease ledger may not be a symlink: %s" % ledger)
+        raise ValueError(f"Lease ledger may not be a symlink: {ledger}")
     flags = os.O_RDONLY
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
@@ -166,7 +166,7 @@ def _find_active_conflict(
     now: str,
 ) -> dict | None:
     if conflicts_on not in CONFLICT_FIELDS:
-        raise ValueError("Unsupported lease conflict field: %s" % conflicts_on)
+        raise ValueError(f"Unsupported lease conflict field: {conflicts_on}")
     for record in _latest_by_lease(records).values():
         if record.get("status") != "active" or _is_expired(record, now):
             continue
@@ -190,7 +190,7 @@ def acquire_lease(
     timestamp = now or _utc_now_iso()
     ttl = max(1, int(ttl_seconds))
     record = {
-        "lease_id": "lease-%s" % uuid.uuid4().hex[:16],
+        "lease_id": f"lease-{uuid.uuid4().hex[:16]}",
         "status": "active",
         "agent": _sanitize(agent, MAX_AGENT_CHARS) or "unknown-agent",
         "task": _sanitize(task, MAX_TASK_CHARS) or "unspecified task",
@@ -211,8 +211,7 @@ def acquire_lease(
             )
             if conflict is not None:
                 raise ValueError(
-                    "Active lease conflict on %s=%s: %s (%s)"
-                    % (
+                    "Active lease conflict on {}={}: {} ({})".format(
                         conflicts_on,
                         "active lease" if conflicts_on == "any" else record.get(conflicts_on, ""),
                         conflict.get("lease_id", ""),
@@ -234,7 +233,7 @@ def release_lease(
     with _lease_lock(memory_root):
         current = _latest_by_lease(_read_records(memory_root)).get(lease_id)
         if current is None:
-            raise ValueError("Unknown lease id: %s" % lease_id)
+            raise ValueError(f"Unknown lease id: {lease_id}")
         record = dict(current)
         record.update(
             {
@@ -294,8 +293,7 @@ def render_human(leases: list[dict]) -> str:
     lines = ["# Agent Leases", ""]
     for lease in leases:
         lines.append(
-            "- `%s` [%s] %s: %s (expires %s)"
-            % (
+            "- `{}` [{}] {}: {} (expires {})".format(
                 lease.get("lease_id", ""),
                 lease.get("status", ""),
                 lease.get("agent", ""),
