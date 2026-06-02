@@ -1,20 +1,16 @@
 import pytest
+from conftest import make_memory_store
 
 from memory_system.models import ProceduralMemory, SemanticMemory, SourceRef
-from memory_system.paths import MemoryScopePaths, validate_memory_item_id
-from memory_system.store import ScopedMemoryStore
+from memory_system.paths import validate_memory_item_id
 
 
-def _store(tmp_path):
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(tmp_path / "memory", scope="project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
+def _project_memory_store(tmp_path):
+    return make_memory_store(tmp_path / "memory")
 
 
 def test_semantic_memory_round_trips_with_provenance_and_strength(tmp_path):
-    store = _store(tmp_path)
+    store = _project_memory_store(tmp_path)
     item = SemanticMemory(
         id="demo-context",
         scope="project",
@@ -46,7 +42,7 @@ def test_semantic_memory_round_trips_with_provenance_and_strength(tmp_path):
 
 
 def test_semantic_memory_preserves_update_log_without_replacing_content(tmp_path):
-    store = _store(tmp_path)
+    store = _project_memory_store(tmp_path)
     item = SemanticMemory(
         id="market-thesis",
         scope="project",
@@ -82,7 +78,7 @@ def test_semantic_memory_preserves_update_log_without_replacing_content(tmp_path
 
 
 def test_procedural_memory_round_trips_and_appears_in_index(tmp_path):
-    store = _store(tmp_path)
+    store = _project_memory_store(tmp_path)
     item = ProceduralMemory(
         id="start-memory",
         scope="project",
@@ -118,18 +114,14 @@ def test_semantic_memory_rejects_symlinked_file(tmp_path):
     outside = tmp_path / "outside.md"
     outside.write_text("SYNTHETIC_SECRET_OUTSIDE_ROOT", encoding="utf-8")
     (root / "semantic" / "demo-context.md").symlink_to(outside)
-    store = ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, scope="project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
+    store = make_memory_store(root)
 
     with pytest.raises(ValueError, match="symlinks"):
         store.read_semantic_memory("demo-context")
 
 
 def test_sources_directory_is_read_only_for_store_writes(tmp_path):
-    store = _store(tmp_path)
+    store = _project_memory_store(tmp_path)
     source = store.paths.sources_dir / "paper.md"
     source.parent.mkdir(parents=True)
     source.write_text("original source text\n", encoding="utf-8")

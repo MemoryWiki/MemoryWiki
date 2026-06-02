@@ -13,6 +13,7 @@ from memory_system.config import default_memory_timezone
 
 DEFAULT_SERVER_NAME = "memorywiki-memory"
 MAX_CONFIG_BYTES = 2_000_000
+SUPPORTED_CLIENTS = ("generic", "codex", "claude-code", "cursor", "gemini-cli", "opencode")
 
 
 def _repo_root() -> Path:
@@ -65,9 +66,22 @@ def build_server_config(
 def build_mcp_json(
     *,
     server_name: str = DEFAULT_SERVER_NAME,
+    client: str = "generic",
     **kwargs: Any,
 ) -> dict[str, Any]:
-    return {"mcpServers": {server_name: build_server_config(**kwargs)}}
+    if client not in SUPPORTED_CLIENTS:
+        raise ValueError("Unsupported MCP client adapter: %s" % client)
+    payload: dict[str, Any] = {"mcpServers": {server_name: build_server_config(**kwargs)}}
+    payload["x-memorywiki"] = {
+        "client": client,
+        "mode": "read-only by default",
+        "write_gates": [
+            "MEMORY_MCP_WRITE_ENABLED",
+            "MEMORY_GLOBAL_WRITE_ENABLED",
+            "MEMORY_MCP_ALLOW_ROOT_OVERRIDE",
+        ],
+    }
+    return payload
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -75,6 +89,12 @@ def build_parser() -> argparse.ArgumentParser:
         description="Generate a .mcp.json snippet for the MemoryWiki MCP server."
     )
     parser.add_argument("--server-name", default=DEFAULT_SERVER_NAME)
+    parser.add_argument(
+        "--client",
+        choices=SUPPORTED_CLIENTS,
+        default="generic",
+        help="Client profile label; generated server config stays read-only by default.",
+    )
     parser.add_argument("--repo-root", default=str(_repo_root()))
     parser.add_argument("--python", default=sys.executable)
     parser.add_argument("--project-root")
@@ -123,6 +143,7 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     payload = build_mcp_json(
         server_name=args.server_name,
+        client=args.client,
         repo_root=args.repo_root,
         python=args.python,
         project_root=args.project_root,

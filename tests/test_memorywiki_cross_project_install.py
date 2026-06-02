@@ -106,6 +106,9 @@ def test_cross_project_install_can_update_existing_agents_with_managed_block(tmp
     assert payload["actions"][0]["status"] == "updated"
     assert "Keep this section." in text
     assert "BEGIN MemoryWiki MCP BRIDGE" in text
+    assert 'memorywiki_context(mode="startup")' in text
+    assert "memorywiki_context.py" in text
+    assert "--mode startup" in text
     assert "memorywiki_mcp_doctor.py" in text
     assert "memory_health.py" in text
     assert "memorywiki_quality_report.py" in text

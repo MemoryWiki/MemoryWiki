@@ -2,6 +2,7 @@
 
 from memorywiki_mcp.schema import (
     CrystallizeInput,
+    ContextInput,
     ForgetInput,
     IndexMaintainInput,
     IngestSourceInput,
@@ -10,6 +11,7 @@ from memorywiki_mcp.schema import (
     WriteSessionInput,
 )
 from memorywiki_mcp.tools import (
+    memorywiki_context,
     memorywiki_crystallize,
     memorywiki_forget,
     memorywiki_index_maintain,
@@ -21,12 +23,14 @@ from memorywiki_mcp.tools import (
 
 __all__ = [
     "CrystallizeInput",
+    "ContextInput",
     "ForgetInput",
     "IndexMaintainInput",
     "IngestSourceInput",
     "ReadMemoryInput",
     "RecallInput",
     "WriteSessionInput",
+    "memorywiki_context",
     "memorywiki_crystallize",
     "memorywiki_forget",
     "memorywiki_index_maintain",

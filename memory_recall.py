@@ -13,8 +13,11 @@ from typing import Iterable
 from memory_index_maintain import rebuild_scope_index
 from memory_system.models import RecallHit, RecallResult, SourceRef
 from memory_system.paths import MemoryScopePaths
+from memory_system.retrieval_associations import rerank_associations
+from memory_system.retrieval_granularity import score_row_views
 from memory_system.retrieval_index import (
     LOCAL_EMBEDDING_MODEL,
+    build_retrieval_views,
     conflict_update_entries,
     load_index,
     local_embedding_for_index,
@@ -102,7 +105,7 @@ def score_document(
     strength: float = 0.0,
     embedding: str = "off",
 ) -> float:
-    return score_document_explanation(
+    explanation = score_document_explanation(
         query,
         title,
         text,
@@ -110,7 +113,8 @@ def score_document(
         confidence=confidence,
         strength=strength,
         embedding=embedding,
-    )["base_score"]
+    )
+    return float(explanation["base_score"])
 
 
 def score_document_explanation(
@@ -159,9 +163,7 @@ def score_document_explanation(
         embedding_model = LOCAL_EMBEDDING_MODEL
         if embedding_vector:
             query_vector = local_embedding_for_index(query)
-            embedding_score = max(
-                0.0, sparse_vector_cosine(query_vector, embedding_vector)
-            ) * 4.0
+            embedding_score = max(0.0, sparse_vector_cosine(query_vector, embedding_vector)) * 4.0
             embedding_source = "cached-index-vector"
         else:
             embedding_score = max(0.0, cosine_score(query_counts, doc_counts)) * 4.0
@@ -242,6 +244,7 @@ def _has_direct_query_signal(explanation: dict) -> bool:
             "exact_phrase_score",
             "concept_score",
             "embedding_score",
+            "final_view_score",
         )
     )
 
@@ -253,6 +256,80 @@ def _conflict_fields(update_log: Iterable[str]) -> dict:
         "conflict_count": len(entries),
         "conflict_entries": entries[:5],
     }
+
+
+def _live_view_row(
+    *,
+    scope: str,
+    source: str,
+    identifier: str,
+    source_path: str,
+    title: str,
+    text: str,
+    concepts: list[str],
+    provenance: list[SourceRef],
+    update_log: Iterable[str] = (),
+) -> dict:
+    safe_update_log = [str(entry) for entry in update_log]
+    return {
+        "scope": scope,
+        "source": source,
+        "identifier": identifier,
+        "source_path": source_path,
+        "title": title,
+        "text": text,
+        "concepts": concepts,
+        "provenance": [asdict(ref) for ref in provenance],
+        "update_log": safe_update_log,
+        "views": build_retrieval_views(
+            scope=scope,
+            source=source,
+            identifier=identifier,
+            source_path=source_path,
+            title=title,
+            text=text,
+            concepts=concepts,
+            source_refs=provenance,
+            update_log=safe_update_log,
+            indexed_at="live",
+        ),
+    }
+
+
+def _apply_granularity_router(
+    *,
+    query: str,
+    explanation: dict,
+    row: dict,
+    embedding: str,
+    granularity_router: str,
+) -> dict:
+    if granularity_router == "off":
+        explanation["granularity_router"] = "off"
+        return explanation
+    view_result = score_row_views(
+        query=query,
+        row=row,
+        embedding=embedding,
+        router=granularity_router,
+    )
+    if view_result is None:
+        explanation["granularity_router"] = granularity_router
+        explanation["granularity_router_status"] = "no_views"
+        return explanation
+    view_score, view_explanation = view_result
+    previous_base = float(explanation.get("base_score") or 0.0)
+    explanation["pre_router_base_score"] = previous_base
+    explanation.update(view_explanation)
+    view_score = float(view_score)
+    if previous_base > 0:
+        router_bonus = min(max(0.0, view_score - previous_base), max(1.0, previous_base * 0.25))
+        explanation["base_score"] = previous_base + router_bonus
+    else:
+        router_bonus = min(view_score, 12.0)
+        explanation["base_score"] = router_bonus
+    explanation["router_bonus"] = router_bonus
+    return explanation
 
 
 def _apply_graph_expansion(candidates: list[dict], graph: str) -> list[RecallHit]:
@@ -294,34 +371,56 @@ def candidates_for_store(
     query: str,
     embedding: str,
     graph: str = "local",
+    granularity_router: str = "off",
 ):
     query_tokens = tokenize(query)
     semantic_candidates = []
-    for item in store.list_semantic_memories(limit=200):
-        text = item.content
+    for semantic_item in store.list_semantic_memories(limit=200):
+        text = semantic_item.content
         explanation = score_document_explanation(
             query,
-            item.title,
+            semantic_item.title,
             text,
-            item.concepts,
-            item.confidence,
-            item.strength,
+            semantic_item.concepts,
+            semantic_item.confidence,
+            semantic_item.strength,
             embedding=embedding,
         )
-        explanation.update(_conflict_fields(item.update_log))
-        score = explanation["base_score"]
-        provenance = item.source_refs + [
-            memory_file_ref("memory-file", f"semantic/{item.id}.md", item.id)
+        explanation.update(_conflict_fields(semantic_item.update_log))
+        explanation["concepts"] = list(semantic_item.concepts)
+        provenance = semantic_item.source_refs + [
+            memory_file_ref("memory-file", f"semantic/{semantic_item.id}.md", semantic_item.id)
         ]
         if explanation["conflict_history"]:
             provenance.append(
-                memory_file_ref("update-log", f"semantic/{item.id}.md", item.id)
+                memory_file_ref("update-log", f"semantic/{semantic_item.id}.md", semantic_item.id)
             )
+        if granularity_router == "off":
+            explanation["granularity_router"] = "off"
+        else:
+            explanation = _apply_granularity_router(
+                query=query,
+                explanation=explanation,
+                row=_live_view_row(
+                    scope=scope,
+                    source="semantic",
+                    identifier=semantic_item.id,
+                    source_path=f"semantic/{semantic_item.id}.md",
+                    title=semantic_item.title,
+                    text=text,
+                    concepts=list(semantic_item.concepts),
+                    provenance=provenance,
+                    update_log=semantic_item.update_log,
+                ),
+                embedding=embedding,
+                granularity_router=granularity_router,
+            )
+        score = explanation["base_score"]
         hit = RecallHit(
             scope=scope,
             source="semantic",
-            identifier=item.id,
-            title=item.title,
+            identifier=semantic_item.id,
+            title=semantic_item.title,
             excerpt=center_excerpt(text, query_tokens),
             score=score,
             provenance=provenance,
@@ -331,36 +430,57 @@ def candidates_for_store(
         semantic_candidates.append(
             {
                 "hit": hit,
-                "concepts": list(item.concepts),
-                "concept_keys": _concept_keys(item.concepts),
+                "concepts": list(semantic_item.concepts),
+                "concept_keys": _concept_keys(semantic_item.concepts),
             }
         )
 
     for hit in _apply_graph_expansion(semantic_candidates, graph):
         yield hit
 
-    for item in store.list_procedural_memories(limit=200):
-        text = "\n".join([item.trigger] + item.steps)
+    for procedural_item in store.list_procedural_memories(limit=200):
+        text = "\n".join([procedural_item.trigger] + procedural_item.steps)
         explanation = score_document_explanation(
             query,
-            item.title,
+            procedural_item.title,
             text,
             [],
-            item.confidence,
-            item.strength,
+            procedural_item.confidence,
+            procedural_item.strength,
             embedding=embedding,
         )
+        provenance = procedural_item.source_refs + [
+            memory_file_ref(
+                "memory-file", f"procedures/{procedural_item.id}.md", procedural_item.id
+            )
+        ]
+        if granularity_router == "off":
+            explanation["granularity_router"] = "off"
+        else:
+            explanation = _apply_granularity_router(
+                query=query,
+                explanation=explanation,
+                row=_live_view_row(
+                    scope=scope,
+                    source="procedure",
+                    identifier=procedural_item.id,
+                    source_path=f"procedures/{procedural_item.id}.md",
+                    title=procedural_item.title,
+                    text=text,
+                    concepts=[],
+                    provenance=provenance,
+                ),
+                embedding=embedding,
+                granularity_router=granularity_router,
+            )
         score = explanation["base_score"]
         if score <= 0:
             continue
-        provenance = item.source_refs + [
-            memory_file_ref("memory-file", f"procedures/{item.id}.md", item.id)
-        ]
         yield RecallHit(
             scope=scope,
             source="procedure",
-            identifier=item.id,
-            title=item.title,
+            identifier=procedural_item.id,
+            title=procedural_item.title,
             excerpt=center_excerpt(text, query_tokens),
             score=score,
             provenance=provenance,
@@ -373,14 +493,31 @@ def candidates_for_store(
         if session is None:
             continue
         text = "\n".join(
-            [session.title, session.body]
-            + session.keypoints
-            + session.actions
-            + session.pending
+            [session.title, session.body] + session.keypoints + session.actions + session.pending
         )
         explanation = score_document_explanation(
             query, session.title, text, [], embedding=embedding
         )
+        provenance = [memory_file_ref("session", f"sessions/{session.id}.md", session.id)]
+        if granularity_router == "off":
+            explanation["granularity_router"] = "off"
+        else:
+            explanation = _apply_granularity_router(
+                query=query,
+                explanation=explanation,
+                row=_live_view_row(
+                    scope=scope,
+                    source="session",
+                    identifier=session.id,
+                    source_path=f"sessions/{session.id}.md",
+                    title=session.title,
+                    text=text,
+                    concepts=[],
+                    provenance=provenance,
+                ),
+                embedding=embedding,
+                granularity_router=granularity_router,
+            )
         score = explanation["base_score"]
         if score <= 0:
             continue
@@ -391,9 +528,7 @@ def candidates_for_store(
             title=session.title,
             excerpt=center_excerpt(text, query_tokens),
             score=score,
-            provenance=[
-                memory_file_ref("session", f"sessions/{session.id}.md", session.id)
-            ],
+            provenance=provenance,
             tokens=estimate_tokens(text),
             score_explanation={**explanation, "strategy": "live"},
         )
@@ -405,6 +540,26 @@ def candidates_for_store(
         explanation = score_document_explanation(
             query, date_text, episode.body, [], embedding=embedding
         )
+        provenance = [memory_file_ref("episode", f"episodes/{date_text}.md", date_text)]
+        if granularity_router == "off":
+            explanation["granularity_router"] = "off"
+        else:
+            explanation = _apply_granularity_router(
+                query=query,
+                explanation=explanation,
+                row=_live_view_row(
+                    scope=scope,
+                    source="episode",
+                    identifier=date_text,
+                    source_path=f"episodes/{date_text}.md",
+                    title=date_text,
+                    text=episode.body,
+                    concepts=[],
+                    provenance=provenance,
+                ),
+                embedding=embedding,
+                granularity_router=granularity_router,
+            )
         score = explanation["base_score"]
         if score <= 0:
             continue
@@ -415,7 +570,7 @@ def candidates_for_store(
             title=date_text,
             excerpt=center_excerpt(episode.body, query_tokens),
             score=score,
-            provenance=[memory_file_ref("episode", f"episodes/{date_text}.md", date_text)],
+            provenance=provenance,
             tokens=estimate_tokens(episode.body),
             score_explanation={**explanation, "strategy": "live"},
         )
@@ -430,6 +585,26 @@ def candidates_for_store(
             continue
         text = sanitize_text(store._read_text_bounded(path))
         explanation = score_document_explanation(query, label, text, [], embedding=embedding)
+        provenance = [memory_file_ref("hot-file", path.name, label)]
+        if granularity_router == "off":
+            explanation["granularity_router"] = "off"
+        else:
+            explanation = _apply_granularity_router(
+                query=query,
+                explanation=explanation,
+                row=_live_view_row(
+                    scope=scope,
+                    source=label,
+                    identifier=label,
+                    source_path=path.name,
+                    title=label.upper(),
+                    text=text,
+                    concepts=[],
+                    provenance=provenance,
+                ),
+                embedding=embedding,
+                granularity_router=granularity_router,
+            )
         score = explanation["base_score"]
         if score <= 0:
             continue
@@ -440,7 +615,7 @@ def candidates_for_store(
             title=label.upper(),
             excerpt=center_excerpt(text, query_tokens),
             score=score,
-            provenance=[memory_file_ref("hot-file", path.name, label)],
+            provenance=provenance,
             tokens=estimate_tokens(text),
             score_explanation={**explanation, "strategy": "live"},
         )
@@ -462,8 +637,8 @@ def _source_refs_from_index(rows: list[dict]) -> list[SourceRef]:
     return refs
 
 
-def _term_counts_from_index(row: dict) -> Counter:
-    counts = Counter()
+def _term_counts_from_index(row: dict) -> Counter[str]:
+    counts: Counter[str] = Counter()
     for token, count in (row.get("term_counts") or {}).items():
         try:
             counts[str(token)] = int(count)
@@ -490,6 +665,7 @@ def candidates_for_index(
     query: str,
     embedding: str,
     graph: str = "local",
+    granularity_router: str = "off",
 ) -> tuple[list[RecallHit], list[str], bool]:
     load_result = load_index(root, scope)
     query_tokens = tokenize(query)
@@ -516,9 +692,9 @@ def candidates_for_index(
                 "conflict_entries": [
                     str(entry) for entry in (row.get("conflict_entries") or [])[:5]
                 ],
+                "concepts": concepts,
             }
         )
-        score = explanation["base_score"]
         provenance = _source_refs_from_index(row.get("provenance") or [])
         if explanation["conflict_history"]:
             provenance.append(
@@ -528,6 +704,14 @@ def candidates_for_index(
                     str(row.get("identifier", "")),
                 )
             )
+        explanation = _apply_granularity_router(
+            query=query,
+            explanation=explanation,
+            row=row,
+            embedding=embedding,
+            granularity_router=granularity_router,
+        )
+        score = explanation["base_score"]
         hit = RecallHit(
             scope=scope,
             source=str(row.get("source", "")),
@@ -629,9 +813,7 @@ def rank_hits(hits: list[RecallHit], ranker: str = "rrf") -> list[RecallHit]:
     return _round_robin_by_source(ranked)
 
 
-def apply_budget(
-    hits: list[RecallHit], limit: int, token_budget: int
-) -> RecallResult:
+def apply_budget(hits: list[RecallHit], limit: int, token_budget: int) -> RecallResult:
     selected = []
     tokens_used = 0
     truncated = len(hits) > limit
@@ -687,6 +869,8 @@ def recall(args) -> RecallResult:
     hits = []
     warnings = []
     graph = getattr(args, "graph", "local")
+    granularity_router = getattr(args, "granularity_router", "off")
+    association_reranker = getattr(args, "association_reranker", "off")
     for scope, root in roots:
         store = safe_store(root, scope)
         if store is None:
@@ -698,14 +882,34 @@ def recall(args) -> RecallResult:
                     "Refreshed retrieval index for {} memory: {}".format(scope, refresh_report.get("index_path", ""))
                 )
         if args.strategy == "live":
-            hits.extend(candidates_for_store(store, scope, args.query, args.embedding, graph))
+            hits.extend(
+                candidates_for_store(
+                    store,
+                    scope,
+                    args.query,
+                    args.embedding,
+                    graph,
+                    granularity_router,
+                )
+            )
             continue
         indexed_hits, index_warnings, index_fresh = candidates_for_index(
-            root, scope, args.query, args.embedding, graph
+            root,
+            scope,
+            args.query,
+            args.embedding,
+            graph,
+            granularity_router,
         )
         warnings.extend(index_warnings)
         if args.strategy == "indexed":
-            hits.extend(indexed_hits)
+            if index_fresh:
+                hits.extend(indexed_hits)
+            else:
+                warnings.append(
+                    f"Indexed recall skipped {scope} memory because the retrieval index is stale, "
+                    "tampered, missing, or mixed-schema."
+                )
             continue
         if index_fresh:
             hits.extend(indexed_hits)
@@ -714,8 +918,18 @@ def recall(args) -> RecallResult:
                 f"Hybrid fallback to live recall for {scope} memory because the retrieval "
                 "index is stale or missing."
             )
-            hits.extend(candidates_for_store(store, scope, args.query, args.embedding, graph))
+            hits.extend(
+                candidates_for_store(
+                    store,
+                    scope,
+                    args.query,
+                    args.embedding,
+                    graph,
+                    granularity_router,
+                )
+            )
 
+    hits = rerank_associations(hits, association_reranker)
     hits = rank_hits(hits, args.ranker)
     result = apply_budget(hits, limit=args.limit, token_budget=args.token_budget)
     result.query = args.query
@@ -839,6 +1053,24 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("off", "local"),
         default="local",
         help="Use the local semantic concept graph to expand related memories.",
+    )
+    parser.add_argument(
+        "--granularity-router",
+        choices=("off", "static", "entropy"),
+        default="off",
+        help=(
+            "Opt-in deterministic multi-view retrieval router; local-only and "
+            "API-free."
+        ),
+    )
+    parser.add_argument(
+        "--association-reranker",
+        choices=("off", "local"),
+        default="off",
+        help=(
+            "Opt-in local association reranking over the candidate set. This is "
+            "separate from --graph local."
+        ),
     )
     parser.add_argument(
         "--ranker",

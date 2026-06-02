@@ -28,13 +28,36 @@ mw config show
 MemoryWiki reads `.memorywiki.toml` when present. Command-line flags still win
 over config file defaults.
 
-## Daily Recall
+## Daily Context And Recall
+
+```bash
+memorywiki-status \
+  --project-root .agent_memory/project \
+  --global-root ~/.agent_memory/global \
+  --scope all
+mw status --project-root .agent_memory/project --scope project
+```
 
 ```bash
 memorywiki-index-maintain --project-root .agent_memory/project --scope project
 memorywiki-index-maintain --project-root .agent_memory/project --scope project --write
 mw index --project-root .agent_memory/project --scope project
 ```
+
+```bash
+memorywiki-context \
+  --project-root .agent_memory/project \
+  --global-root ~/.agent_memory/global \
+  --scope all \
+  --mode startup \
+  --query "current project status" \
+  --format markdown
+mw context --project-root .agent_memory/project --scope project --mode startup
+```
+
+`memorywiki-context` is read-only by default and is the preferred startup
+surface. It separates stable profile, dynamic activity, and task recall. Raw
+source excerpts are omitted unless `--include-excerpts` is explicit.
 
 ```bash
 memorywiki-recall \
@@ -48,6 +71,29 @@ memorywiki-recall \
 ```bash
 memorywiki-list --project-root .agent_memory/project --kind semantic
 mw list --project-root .agent_memory/project --kind all
+```
+
+```bash
+memorywiki-export --project-root .agent_memory/project --scope project --format json
+memorywiki-export --project-root .agent_memory/project --kind all --format markdown --out memory-export.md
+mw export --project-root .agent_memory/project --kind semantic --format csv
+```
+
+`memorywiki-export` is read-only against memory roots. It prints to stdout by
+default and writes only when `--out` is explicit. Source document bodies are not
+included unless `--include-source-bodies` is also explicit.
+
+Before a full code read, use advisory file history to check prior MemoryWiki
+context for a project file without reading that file's contents:
+
+```bash
+memorywiki-file-history \
+  --path src/app.py \
+  --workspace-root "$(pwd)" \
+  --project-root .agent_memory/project \
+  --scope project \
+  --format json
+mw file-history --path src/app.py --workspace-root "$(pwd)"
 ```
 
 ## Explicit Writes
@@ -96,10 +142,32 @@ memorywiki-forget \
 ```bash
 memorywiki-health --project-root .agent_memory/project --scope project
 memorywiki-quality-report --project-root .agent_memory/project --scope project --skip-golden
+memorywiki-construction-report --project-root .agent_memory/project --scope project --format markdown
 memorywiki-review --project-root .agent_memory/project --scope project
 memorywiki-lifecycle --project-root .agent_memory/project --scope project
+mw construction-report --project-root .agent_memory/project --scope project --format markdown
 mw quality --project-root .agent_memory/project --scope project --skip-golden
 ```
+
+`memorywiki-construction-report` is read-only by default. Add
+`--write-candidates` only when you explicitly want to append topic bundle
+candidates to `_pending/construction_topic_bundles.jsonl`; this still does not
+promote semantic or procedural memory.
+
+Lifecycle capture is also pending-only. It imports public-safe agent lifecycle
+JSONL in dry-run mode by default:
+
+```bash
+memorywiki-capture-ingest \
+  --adapter generic-jsonl \
+  --source lifecycle-events.jsonl \
+  --project-root .agent_memory/project \
+  --format json
+mw capture-ingest --source lifecycle-events.jsonl --project-root .agent_memory/project
+```
+
+Use `--write --reason "..."` only when you explicitly want to stage rows under
+`_pending/session_captures.jsonl`; this does not promote canonical memory.
 
 ```bash
 memorywiki-knowledge-ops \
@@ -179,6 +247,7 @@ memorywiki-merge-episodes \
   --dst .agent_memory/project \
   --scope project \
   --dry-run
+mw merge --src legacy-memory --dst .agent_memory/project --scope project --dry-run
 ```
 
 ```bash
@@ -189,7 +258,7 @@ memorywiki-wake-prompt --project-root .agent_memory/project --format markdown
 ## MCP
 
 ```bash
-memorywiki-mcp-config --output .mcp.json
+memorywiki-mcp-config --client codex --output .mcp.json
 memorywiki-mcp-contract --output docs/memorywiki-mcp-v1-contract.json
 memorywiki-mcp-contract --verify docs/memorywiki-mcp-v1-contract.json
 memorywiki-mcp-doctor --config .mcp.json

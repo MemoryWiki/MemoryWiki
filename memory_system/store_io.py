@@ -11,12 +11,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from memory_system.sanitizer import neutralize_instruction_text
+
+fcntl: Any
 try:
-    import fcntl
+    import fcntl as fcntl
 except ImportError:  # pragma: no cover - Windows fallback
     fcntl = None
-
-from memory_system.sanitizer import neutralize_instruction_text
 
 MAX_MANAGED_READ_BYTES = 2_000_000
 MAX_MANAGED_JSONL_ROWS = 10_000
@@ -32,7 +33,7 @@ def read_or_create(store: Any, path: Path, template: str) -> str:
                 store._atomic_write_text_unlocked(path, template)
             if path != store.paths.index:
                 store._mark_index_dirty_unlocked()
-    return store._read_text_bounded(path)
+    return str(store._read_text_bounded(path))
 
 
 def append_jsonl(store: Any, path: Path, row: dict) -> None:
@@ -107,7 +108,7 @@ def append_text_unlocked(store: Any, path: Path, content: str) -> None:
 
 
 def index_is_dirty(store: Any) -> bool:
-    return store._index_dirty_path.exists()
+    return bool(store._index_dirty_path.exists())
 
 
 def mark_index_dirty_unlocked(store: Any) -> None:
@@ -315,7 +316,7 @@ def read_text_bounded(store: Any, path: Path) -> str:
 def read_lines_bounded(
     store: Any, path: Path, max_rows: int = MAX_MANAGED_JSONL_ROWS
 ) -> list[str]:
-    lines = store._read_text_bounded(path).splitlines()
+    lines = str(store._read_text_bounded(path)).splitlines()
     if len(lines) > max_rows:
         warnings.warn(
             f"Managed JSONL file exceeds safe row limit; truncating to {max_rows} rows: {path}",

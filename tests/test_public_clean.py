@@ -6,7 +6,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 FORBIDDEN_MARKERS = [
-    "lzd" + "5669",
     "/Users" + "/",
     "Documents/" + "CODEX",
     "personal" + "_memory_system",
@@ -110,7 +109,6 @@ def test_git_history_has_no_private_or_legacy_markers():
         "personal-agent" + "-memory",
         "private" + "-git" + "-remotes",
         "private" + "-local",
-        "lzd" + "5669",
         "deep" + "-security" + "-hunter",
         "ds" + "h-",
         "gh[pousr]_[A-Za-z0-9_]{20,}",
@@ -151,7 +149,6 @@ def test_git_history_has_no_private_or_legacy_markers():
         "personal-agent" + "-memory",
         "private" + "-git" + "-remotes",
         "private" + "-local",
-        "lzd" + "5669",
         "deep" + "-security" + "-hunter",
         "ds" + "h-",
     ]

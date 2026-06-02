@@ -5,20 +5,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+from conftest import make_memory_store as _store
+
 from memory_health import run_health
 from memory_system.models import SemanticMemory, SourceRef
-from memory_system.paths import MemoryScopePaths
-from memory_system.store import ScopedMemoryStore
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _store(root: Path) -> ScopedMemoryStore:
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, "project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
 
 
 def test_memory_health_detects_quality_and_source_issues(tmp_path):

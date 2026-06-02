@@ -261,7 +261,9 @@ class MemoryConfig:
             global_storage_root=global_root,
             backend=os.getenv("MEMORY_BACKEND", str(file_config.get("backend", "local"))),
             openai_api_key=os.getenv("OPENAI_API_KEY"),
-            openai_base_url=os.getenv("OPENAI_BASE_URL"),
+            openai_base_url=os.getenv(
+                "OPENAI_BASE_URL", str(file_config.get("openai_base_url", "")) or None
+            ),
             model=os.getenv("OPENAI_MODEL", str(file_config.get("model", "gpt-5.4"))),
             openai_timeout_seconds=openai_timeout_seconds,
             openai_max_retries=openai_max_retries,

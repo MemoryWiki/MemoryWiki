@@ -15,12 +15,16 @@ LEASE_KIND = "retrieval-index"
 DEFAULT_LEASE_TTL_SECONDS = 3600
 
 
-def _scope_roots(args) -> list[tuple[str, Path]]:
+def _scope_roots(
+    project_root: str | Path,
+    global_root: str | Path,
+    scope: str,
+) -> list[tuple[str, Path]]:
     roots = []
-    if args.scope in ("all", "global"):
-        roots.append(("global", Path(args.global_root).expanduser()))
-    if args.scope in ("all", "project"):
-        roots.append(("project", Path(args.project_root).expanduser()))
+    if scope in ("all", "global"):
+        roots.append(("global", Path(global_root).expanduser()))
+    if scope in ("all", "project"):
+        roots.append(("project", Path(project_root).expanduser()))
     return roots
 
 
@@ -145,14 +149,7 @@ def maintain_indexes(
     agent: str = "memorywiki-index-maintain",
     ttl_seconds: int = DEFAULT_LEASE_TTL_SECONDS,
 ) -> dict:
-    class Args:
-        pass
-
-    args = Args()
-    args.project_root = project_root
-    args.global_root = global_root
-    args.scope = scope
-    roots = _scope_roots(args)
+    roots = _scope_roots(project_root, global_root, scope)
     reports = []
     initial_rebuild_needed = False
     for root_scope, root in roots:

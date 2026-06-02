@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from memory_construction import load_construction_topic_bundle_rows
 from memory_crystallize_candidates import QUEUE_NAME
 from memory_feedback import LEDGER_NAME
 from memory_health import run_health
@@ -200,6 +201,7 @@ def build_review_inbox(
     health_issues: list[dict[str, Any]],
     feedback_rows: list[dict[str, Any]],
     pending_candidates: list[dict[str, Any]],
+    construction_candidates: list[dict[str, Any]],
     golden_proposals: list[dict[str, Any]],
     repair_proposals: list[dict[str, Any]],
     lifecycle_proposals: list[dict[str, Any]],
@@ -246,6 +248,21 @@ def build_review_inbox(
                 action="review candidate; apply only with --apply-candidate and --write",
                 source="memory_crystallize_candidates",
                 target=str(candidate.get("id", "")),
+                payload=candidate,
+            )
+        )
+    for candidate in construction_candidates:
+        labels = ", ".join(str(item) for item in candidate.get("topic_labels", [])[:3])
+        inbox.append(
+            _inbox_item(
+                category="construction-topic-bundle",
+                scope=str(candidate.get("scope", "")),
+                severity="info",
+                status="candidate",
+                summary="Topic bundle candidate: {}".format(labels or candidate.get("bundle_id", "")),
+                action="review construction topic bundle before crystallizing stable memory",
+                source="memory_construction",
+                target=str(candidate.get("bundle_id", "")),
                 payload=candidate,
             )
         )
@@ -1104,6 +1121,7 @@ def run_review(
     )
     feedback_rows = []
     pending_candidates = []
+    construction_candidates = []
     for selected_scope, root in _selected_roots(
         project_root=project_root,
         global_root=global_root,
@@ -1111,6 +1129,9 @@ def run_review(
     ):
         feedback_rows.extend(load_feedback_rows(root, selected_scope))
         pending_candidates.extend(load_candidate_rows(root, selected_scope))
+        construction_candidates.extend(
+            load_construction_topic_bundle_rows(root, selected_scope)
+        )
     apply_payload = None
     if apply_candidate_id:
         apply_payload = apply_candidate(
@@ -1177,6 +1198,7 @@ def run_review(
         health_issues=health["issues"],
         feedback_rows=feedback_rows,
         pending_candidates=pending_candidates,
+        construction_candidates=construction_candidates,
         golden_proposals=golden_proposals,
         repair_proposals=repair_proposals,
         lifecycle_proposals=lifecycle["proposals"],
@@ -1202,6 +1224,8 @@ def run_review(
         "feedback": feedback_rows,
         "pending_candidate_count": len(pending_candidates),
         "pending_candidates": pending_candidates,
+        "construction_candidate_count": len(construction_candidates),
+        "construction_candidates": construction_candidates,
         "golden_proposals": golden_proposals,
         "golden_candidate_write": golden_candidate_write,
         "golden_candidate_promotion": golden_candidate_promotion,
@@ -1223,6 +1247,7 @@ def render_human(payload: dict[str, Any]) -> str:
         "Lifecycle proposals: {}".format(payload["lifecycle_proposal_count"]),
         "Feedback rows: {}".format(payload["feedback_count"]),
         "Pending candidates: {}".format(payload["pending_candidate_count"]),
+        "Construction candidates: {}".format(payload["construction_candidate_count"]),
         "Golden proposals: {}".format(len(payload["golden_proposals"])),
         "Golden candidate backlog: {} ready / {} total".format(
             payload["golden_candidate_backlog"]["ready_count"],
@@ -1244,6 +1269,16 @@ def render_human(payload: dict[str, Any]) -> str:
         lines.append("## Pending Candidates")
         for candidate in payload["pending_candidates"][:10]:
             lines.append("- [{kind}] {id}: {title}".format(**candidate))
+        lines.append("")
+    if payload["construction_candidates"]:
+        lines.append("## Construction Topic Bundles")
+        for candidate in payload["construction_candidates"][:10]:
+            lines.append(
+                "- {bundle}: {labels}".format(
+                    bundle=candidate.get("bundle_id", ""),
+                    labels=", ".join(str(item) for item in candidate.get("topic_labels", [])[:3]),
+                )
+            )
         lines.append("")
     if payload["golden_proposals"]:
         lines.append("## Golden Eval Proposals")

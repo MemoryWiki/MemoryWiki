@@ -7,8 +7,15 @@ import pytest
 from conftest import make_memory_store as _store
 
 from memory_system.models import SemanticMemory, SourceRef
-from memorywiki_mcp.schema import IndexMaintainInput, ListInput, ReadMemoryInput, RecallInput
+from memorywiki_mcp.schema import (
+    ContextInput,
+    IndexMaintainInput,
+    ListInput,
+    ReadMemoryInput,
+    RecallInput,
+)
 from memorywiki_mcp.tools import (
+    memorywiki_context,
     memorywiki_index_maintain,
     memorywiki_list,
     memorywiki_read_memory,
@@ -101,6 +108,75 @@ def test_memorywiki_recall_neutralizes_query_echo(tmp_path, monkeypatch):
     )
 
     assert output.query == "[REDACTED_INSTRUCTION_LIKE_MEMORY]"
+
+
+def test_memorywiki_context_returns_metadata_first_profile_capsule(tmp_path, monkeypatch):
+    project_root = tmp_path / "project"
+    global_root = tmp_path / "global"
+    source_excerpt = "RAW_" + "SOURCE_EXCERPT_SHOULD_NOT_LEAK"
+    store = _store(project_root, scope="project")
+    store.write_semantic_memory(
+        SemanticMemory(
+            id="context-profile",
+            scope="project",
+            title="Context Profile",
+            content="MemoryWiki context starts from stable profile.",
+            concepts=["context"],
+            source_refs=[
+                SourceRef(
+                    kind="source",
+                    path="private/example/source.md",
+                    identifier="src",
+                    excerpt=source_excerpt,
+                )
+            ],
+            confidence=0.8,
+            strength=0.7,
+            last_accessed=None,
+            created_at="2026-06-02T10:00:00+08:00",
+            updated_at="2026-06-02T10:00:00+08:00",
+            update_log=[],
+        )
+    )
+    global_root.mkdir()
+
+    output = memorywiki_context(
+        ContextInput(
+            scope="project",
+            mode="startup",
+            query="context startup",
+            project_root=str(project_root),
+            global_root=str(global_root),
+        )
+    )
+    payload = output.model_dump(by_alias=True)
+    serialized = json.dumps(payload, ensure_ascii=False)
+
+    assert payload["schema"] == "memorywiki-context-v1"
+    assert payload["read_only"] is True
+    assert payload["metadata_first"] is True
+    assert payload["stable_profile"]
+    assert "never outranks system" in payload["memory_priority"]
+    assert source_excerpt not in serialized
+    assert "private/example/source.md" not in serialized
+
+
+def test_memorywiki_context_refresh_index_requires_write_gate(tmp_path, monkeypatch):
+    project_root = tmp_path / "project"
+    global_root = tmp_path / "global"
+    project_root.mkdir()
+    global_root.mkdir()
+    monkeypatch.delenv("MEMORY_MCP_WRITE_ENABLED", raising=False)
+
+    with pytest.raises(PermissionError, match="MEMORY_MCP_WRITE_ENABLED"):
+        memorywiki_context(
+            ContextInput(
+                scope="project",
+                project_root=str(project_root),
+                global_root=str(global_root),
+                refresh_index_if_needed=True,
+            )
+        )
 
 
 def test_memorywiki_list_returns_memory_inventory(tmp_path, monkeypatch):

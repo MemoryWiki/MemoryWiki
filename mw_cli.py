@@ -20,8 +20,29 @@ COMMANDS: dict[str, CommandTarget] = {
         "main",
     ),
     "config": ("Inspect or initialize configuration.", "memorywiki_config", "main"),
+    "construction-report": (
+        "Render a read-only memory-construction report.",
+        "memorywiki_construction_report",
+        "main",
+    ),
+    "context": (
+        "Assemble a profile-first startup context capsule.",
+        "memorywiki_context",
+        "main",
+    ),
+    "capture-ingest": (
+        "Stage public-safe lifecycle JSONL into _pending/.",
+        "memory_capture_ingest",
+        "main",
+    ),
     "crystallize": ("Promote an explicit answer into memory.", "memory_crystallize", "main"),
     "feedback": ("Record explicit recall feedback.", "memory_feedback", "main"),
+    "export": ("Export memory data for review or migration.", "memorywiki_export", "main"),
+    "file-history": (
+        "Show advisory MemoryWiki history for a project file.",
+        "memorywiki_file_history",
+        "main",
+    ),
     "forget": ("Dry-run or apply explicit deletion.", "memory_forget", "main"),
     "golden-eval": ("Run retrieval golden-case evaluation.", "retrieval_golden_eval", "main"),
     "health": ("Inspect memory health signals.", "memory_health", "main"),
@@ -40,6 +61,7 @@ COMMANDS: dict[str, CommandTarget] = {
     ),
     "lifecycle": ("Review ledger lifecycle and archive candidates.", "memory_lifecycle", "main"),
     "list": ("List memory inventory.", "memorywiki_list", "main"),
+    "merge": ("Merge legacy daily files into episodes.", "merge_episodes", "main"),
     "mcp": ("Run the MemoryWiki MCP server.", "memorywiki_mcp.cli", "main"),
     "mcp-config": ("Generate an MCP client configuration.", "memorywiki_mcp.client_config", "main"),
     "mcp-contract": ("Generate or verify the MCP contract.", "memorywiki_mcp_contract", "main"),
@@ -55,6 +77,7 @@ COMMANDS: dict[str, CommandTarget] = {
     "release-manifest": ("Build or verify a release manifest.", "memorywiki_release_manifest", "main"),
     "restore-check": ("Run a restore drill against a memory root.", "memorywiki_restore_check", "main"),
     "review": ("Review pending memory items.", "memory_review", "main"),
+    "status": ("Show read-only MemoryWiki startup status.", "memorywiki_status", "main"),
     "timeline": ("Render a memory timeline.", "memory_timeline", "main"),
 }
 

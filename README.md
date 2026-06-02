@@ -3,7 +3,7 @@
 [![CI](https://github.com/MemoryWiki/MemoryWiki/actions/workflows/ci.yml/badge.svg)](https://github.com/MemoryWiki/MemoryWiki/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.9--3.13-blue)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
-![Status](https://img.shields.io/badge/status-v0.1.0%20candidate-orange)
+![Status](https://img.shields.io/badge/status-v0.1.1%20candidate-orange)
 
 Local-first, Markdown-native memory for AI agents: **grep it, diff it, back it
 up, delete it, and recall it through CLI or MCP.**
@@ -17,6 +17,13 @@ Use it when an agent needs persistent project context, but you still want memory
 to stay inspectable, reversible, and under your control.
 
 ![MemoryWiki quickstart demo](docs/assets/memorywiki-quickstart.gif)
+
+## What's New
+
+- Full core and MCP type checks now run in CI with `mypy`.
+- `memorywiki-export` / `mw export` can export memory as JSON, Markdown, or CSV.
+- `mw` aliases now cover daily recall, review, release, and migration helpers.
+- Public examples include a demo project, MCP config, and sample memory root.
 
 ## Why
 
@@ -47,23 +54,11 @@ git clone https://github.com/MemoryWiki/MemoryWiki.git
 cd MemoryWiki
 python3 -m pip install -e ".[mcp]"
 memorywiki-index-maintain --project-root examples/memory-root --scope project --format human
+memorywiki-context --project-root examples/memory-root --scope project --mode startup --query "What is MemoryWiki?" --format markdown
 memorywiki-recall --project-root examples/memory-root --scope project --query "What is MemoryWiki?" --strategy hybrid --embedding local --graph local --format human
 ```
 
-Expected recall shape:
-
-```text
-# Memory Recall
-
-Query: What is MemoryWiki?
-Strategy: hybrid
-
-1. [project/semantic] MemoryWiki Overview (memorywiki-overview, score ...)
-MemoryWiki is a local-first memory wiki for AI agents. It stores durable project
-context in Markdown, keeps source provenance, supports explicit session saves,
-and exposes read-first recall through CLI and MCP.
-Sources: memory-file:memorywiki-overview
-```
+Expected `# MemoryWiki Context`, followed by focused `# Memory Recall` output.
 
 CLI-only install:
 
@@ -158,6 +153,25 @@ memorywiki-list \
   --format table
 ```
 
+Export memory for review or migration:
+
+```bash
+memorywiki-export \
+  --project-root examples/memory-root \
+  --scope project \
+  --kind all \
+  --format markdown
+```
+
+Review construction candidates without writing memory:
+
+```bash
+memorywiki-construction-report \
+  --project-root examples/memory-root \
+  --scope project \
+  --format markdown
+```
+
 Save a session summary after explicit approval:
 
 ```bash
@@ -246,25 +260,23 @@ large retrieval benchmark.
 python3 -m pytest tests -q
 ```
 
-## Status And Governance
+## Status
 
 MemoryWiki is early public software extracted from a working local system. The
 core CLI, storage model, retrieval index, MCP server, release checks, and tests
-are present. Public docs and benchmarks will grow from real user feedback.
+are present. Start with `docs/getting-started/quickstart.md`, `docs/faq.md`,
+`SECURITY.md`, and `CHANGELOG.md`; deeper docs live under `docs/`.
 
-Public-release preparation lives in:
+Useful read-only operator entrypoints:
 
-- `SECURITY.md`
-- `CONTRIBUTING.md`
-- `CODE_OF_CONDUCT.md`
-- `CHANGELOG.md`
-- `docs/faq.md`
-- `docs/getting-started/quickstart.md`
-- `docs/troubleshooting/common-errors.md`
-- `docs/internal/first-week-feedback.md`
-- `docs/internal/launch/github-publication-checklist.md`
-- `docs/internal/launch/public-go-live-runbook.md`
-- `docs/internal/launch/release-playbook.md`
-- `docs/internal/launch/marketing-plan.md`
+```bash
+memorywiki-status --project-root examples/memory-root --scope project
+memorywiki-file-history --path README.md --workspace-root "$(pwd)" --project-root examples/memory-root --scope project
+memorywiki-capture-ingest --source lifecycle-events.jsonl --project-root .agent_memory/project --format json
+memorywiki-mcp-config --client codex --output .mcp.json
+```
+
+`memorywiki-capture-ingest` is dry-run by default. Explicit writes only stage
+pending evidence under `_pending/session_captures.jsonl`.
 
 License: Apache-2.0.

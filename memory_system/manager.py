@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from memory_system.compressor import MemoryCompressor
@@ -62,6 +63,8 @@ class MemoryManager:
             project_store=project_store,
             canonical_user_path=config.canonical_user_memory_path,
         )
+        chat_client: Any
+        compressor: Any
         if config.backend == "local":
             chat_client = LocalChatClient()
             compressor = LocalCompressor(

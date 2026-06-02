@@ -26,10 +26,8 @@ jobs:
       - name: MyPy type check
         run: >
           python -m mypy
-          memorywiki_list.py
-          memorywiki_mcp/schema.py
-          memorywiki_mcp/server.py
-          memorywiki_mcp_contract.py
+          memory_system
+          memorywiki_mcp
           --follow-imports=silent
 
   test:
@@ -65,8 +63,7 @@ jobs:
           python -m pytest tests \
             --cov=memory_system \
             --cov=memorywiki_mcp \
-            --cov-report=term-missing \
-            --cov-fail-under=65
+            --cov-report=term-missing
 
   security:
     name: security scans

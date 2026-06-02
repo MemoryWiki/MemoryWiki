@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from memory_system.models import SemanticMemory, SessionFile
+from memory_system.retrieval_index import MAX_INDEX_TERM_COUNTS
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -127,6 +128,44 @@ def test_memory_index_build_tokenizes_chinese_terms_and_update_log(
     assert semantic["term_counts"]["电力竞争"] >= 1
     assert semantic["conflict_history"] is True
     assert "Conflict:" in semantic["conflict_entries"][0]
+
+
+def test_memory_index_build_caps_term_counts_for_long_cjk_text(tmp_path, memory_store_factory):
+    project_root = tmp_path / "project"
+    store = memory_store_factory(project_root)
+    store.write_session(
+        SessionFile(
+            id="session-20260527-101500",
+            date="2026-05-27",
+            scope="project",
+            title="Long CJK session",
+            keypoints=[],
+            actions=[],
+            pending=[],
+            duration_seconds=None,
+            body="".join(chr(0x4E00 + (index % 1800)) for index in range(5000)),
+        )
+    )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "memory_index_build.py",
+            "--root",
+            str(project_root),
+            "--scope",
+            "project",
+        ],
+        cwd=REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    row = json.loads((project_root / "retrieval" / "index.jsonl").read_text(encoding="utf-8"))
+
+    assert len(row["term_counts"]) <= MAX_INDEX_TERM_COUNTS
+    for view in row.get("views", []):
+        assert len(view["term_counts"]) <= MAX_INDEX_TERM_COUNTS
 
 
 def test_memory_index_build_rejects_symlinked_index_file(tmp_path, memory_store_factory):

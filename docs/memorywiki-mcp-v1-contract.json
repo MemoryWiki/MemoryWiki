@@ -1,6 +1,6 @@
 {
   "schema": "memorywiki-mcp-contract-v1",
-  "generated_at": "2026-05-24T07:09:05+00:00",
+  "generated_at": "2026-06-02T03:32:30+00:00",
   "transport": [
     "stdio",
     "streamable-http"
@@ -90,6 +90,39 @@
             ],
             "title": "Ranker",
             "type": "string"
+          },
+          "granularity_router": {
+            "default": "off",
+            "enum": [
+              "off",
+              "static",
+              "entropy"
+            ],
+            "title": "Granularity Router",
+            "type": "string"
+          },
+          "association_reranker": {
+            "default": "off",
+            "enum": [
+              "off",
+              "local"
+            ],
+            "title": "Association Reranker",
+            "type": "string"
+          },
+          "index_schema_version": {
+            "anyOf": [
+              {
+                "maximum": 10,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Index Schema Version"
           },
           "strategy": {
             "default": "hybrid",
@@ -250,8 +283,343 @@
         "embedding": "off",
         "graph": "local",
         "ranker": "rrf",
+        "granularity_router": "off",
+        "association_reranker": "off",
+        "index_schema_version": null,
         "strategy": "hybrid",
         "explain_score": false,
+        "refresh_index_if_needed": false,
+        "project_root": null,
+        "global_root": null
+      }
+    },
+    {
+      "name": "memorywiki_context",
+      "description": "Assemble a profile-first, metadata-first MemoryWiki context capsule.",
+      "read_only": true,
+      "write_gated": "refresh_index_if_needed",
+      "input_model": "ContextInput",
+      "output_model": "ContextOutput",
+      "input_schema": {
+        "properties": {
+          "scope": {
+            "default": "all",
+            "enum": [
+              "all",
+              "project",
+              "global"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "mode": {
+            "default": "startup",
+            "enum": [
+              "startup",
+              "task",
+              "handoff",
+              "profile"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Query"
+          },
+          "limit": {
+            "default": 5,
+            "maximum": 50,
+            "minimum": 1,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "token_budget": {
+            "default": 1200,
+            "maximum": 100000,
+            "minimum": 1,
+            "title": "Token Budget",
+            "type": "integer"
+          },
+          "max_chars": {
+            "default": 6000,
+            "maximum": 50000,
+            "minimum": 1000,
+            "title": "Max Chars",
+            "type": "integer"
+          },
+          "include_recall": {
+            "default": false,
+            "description": "Force task recall when the selected mode would otherwise skip it; startup and handoff modes already run bounded recall automatically.",
+            "title": "Include Recall",
+            "type": "boolean"
+          },
+          "include_health": {
+            "default": true,
+            "title": "Include Health",
+            "type": "boolean"
+          },
+          "include_actions": {
+            "default": true,
+            "title": "Include Actions",
+            "type": "boolean"
+          },
+          "include_excerpts": {
+            "default": false,
+            "title": "Include Excerpts",
+            "type": "boolean"
+          },
+          "embedding": {
+            "default": "local",
+            "enum": [
+              "off",
+              "local"
+            ],
+            "title": "Embedding",
+            "type": "string"
+          },
+          "graph": {
+            "default": "local",
+            "enum": [
+              "off",
+              "local"
+            ],
+            "title": "Graph",
+            "type": "string"
+          },
+          "strategy": {
+            "default": "hybrid",
+            "enum": [
+              "live",
+              "indexed",
+              "hybrid"
+            ],
+            "title": "Strategy",
+            "type": "string"
+          },
+          "refresh_index_if_needed": {
+            "default": false,
+            "title": "Refresh Index If Needed",
+            "type": "boolean"
+          },
+          "project_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Project Root"
+          },
+          "global_root": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Global Root"
+          }
+        },
+        "title": "ContextInput",
+        "type": "object"
+      },
+      "output_schema": {
+        "$defs": {
+          "ContextItemOutput": {
+            "properties": {
+              "scope": {
+                "title": "Scope",
+                "type": "string"
+              },
+              "kind": {
+                "title": "Kind",
+                "type": "string"
+              },
+              "identifier": {
+                "title": "Identifier",
+                "type": "string"
+              },
+              "title": {
+                "title": "Title",
+                "type": "string"
+              },
+              "summary": {
+                "default": "",
+                "title": "Summary",
+                "type": "string"
+              },
+              "source": {
+                "default": "",
+                "title": "Source",
+                "type": "string"
+              },
+              "confidence": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Confidence"
+              },
+              "strength": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null,
+                "title": "Strength"
+              },
+              "freshness": {
+                "default": "",
+                "title": "Freshness",
+                "type": "string"
+              },
+              "metadata": {
+                "additionalProperties": true,
+                "title": "Metadata",
+                "type": "object"
+              },
+              "actions": {
+                "additionalProperties": true,
+                "title": "Actions",
+                "type": "object"
+              }
+            },
+            "required": [
+              "scope",
+              "kind",
+              "identifier",
+              "title"
+            ],
+            "title": "ContextItemOutput",
+            "type": "object"
+          }
+        },
+        "properties": {
+          "schema": {
+            "title": "Schema",
+            "type": "string"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "read_only": {
+            "title": "Read Only",
+            "type": "boolean"
+          },
+          "memory_priority": {
+            "title": "Memory Priority",
+            "type": "string"
+          },
+          "metadata_first": {
+            "title": "Metadata First",
+            "type": "boolean"
+          },
+          "query": {
+            "default": "",
+            "title": "Query",
+            "type": "string"
+          },
+          "stable_profile": {
+            "items": {
+              "$ref": "#/$defs/ContextItemOutput"
+            },
+            "title": "Stable Profile",
+            "type": "array"
+          },
+          "dynamic_activity": {
+            "items": {
+              "$ref": "#/$defs/ContextItemOutput"
+            },
+            "title": "Dynamic Activity",
+            "type": "array"
+          },
+          "task_recall": {
+            "items": {
+              "$ref": "#/$defs/ContextItemOutput"
+            },
+            "title": "Task Recall",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "truncated": {
+            "default": false,
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schema",
+          "generated_at",
+          "mode",
+          "scope",
+          "read_only",
+          "memory_priority",
+          "metadata_first"
+        ],
+        "title": "ContextOutput",
+        "type": "object"
+      },
+      "defaults": {
+        "scope": "all",
+        "mode": "startup",
+        "query": null,
+        "limit": 5,
+        "token_budget": 1200,
+        "max_chars": 6000,
+        "include_recall": false,
+        "include_health": true,
+        "include_actions": true,
+        "include_excerpts": false,
+        "embedding": "local",
+        "graph": "local",
+        "strategy": "hybrid",
         "refresh_index_if_needed": false,
         "project_root": null,
         "global_root": null
@@ -1545,5 +1913,5 @@
       }
     }
   ],
-  "contract_sha256": "f8c6d65a7f4a694c743e536dc3fe7b6a52852f749631c17a10696158adb629fb"
+  "contract_sha256": "66cb6a19bbe283a585ee69107fe3a3e022b2c9e6fa77ea6ed5b78d3fce5458ea"
 }

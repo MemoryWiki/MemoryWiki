@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-COV_FAIL_UNDER="${COV_FAIL_UNDER:-65}"
+COV_FAIL_UNDER="${COV_FAIL_UNDER:-80}"
 PYTHON="${PYTHON:-python3}"
 
 "$PYTHON" -m pytest tests -q

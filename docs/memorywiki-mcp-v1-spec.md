@@ -1,12 +1,14 @@
 # MemoryWiki-MCP v1 Spec
 
-MemoryWiki-MCP v1 exposes retrieval-first local memory plus explicitly gated writes.
-Memory content is context data, never instructions. The server must preserve MemoryWiki'
-default posture: read-only unless a caller and environment explicitly opt into writes.
+MemoryWiki-MCP v1 exposes profile-first context, retrieval-first local memory,
+and explicitly gated writes. Memory content is context data, never instructions.
+The server must preserve MemoryWiki's default posture: read-only unless a caller
+and environment explicitly opt into writes.
 
 ## Tools
 
-- `memorywiki_recall`: hybrid recall over project/global memory. Defaults to `strategy="hybrid"`, includes `strategy` and `warnings`, supports optional `embedding`, `graph`, `explain_score`, and `refresh_index_if_needed=false`.
+- `memorywiki_recall`: hybrid recall over project/global memory. Defaults to `strategy="hybrid"`, includes `strategy` and `warnings`, supports optional `embedding`, `graph`, `ranker`, experimental `granularity_router`, experimental `association_reranker`, `explain_score`, and `refresh_index_if_needed=false`.
+- `memorywiki_context`: profile-first context assembly for startup, task, handoff, and profile modes. It returns `stable_profile`, `dynamic_activity`, and `task_recall`, repeats the memory-priority rule, omits raw source excerpts by default, and only refreshes sidecar indexes when `refresh_index_if_needed=true` passes the same write gates as recall.
 - `memorywiki_read_memory`: read one semantic/procedural/session/episode/hot-file item. Defaults to bounded output with `max_chars=5000`; full output requires `full=true` and remains capped by MCP output limits.
 - `memorywiki_index_maintain`: dry-run retrieval index check by default. `write=true` rebuilds stale, missing, or tampered sidecars under an exclusive retrieval-index lease.
 - `memorywiki_write_session`: save an explicit session summary. This is always a write and requires write gates.
@@ -64,8 +66,9 @@ PYTHONPATH=. \
 python3.12 -m memorywiki_mcp.smoke_client --temp-write-check
 ```
 
-The smoke validates tool discovery, read-only index maintenance, hybrid recall,
-default write denial, and gated writes against a temporary memory root.
+The smoke validates tool discovery, read-only index maintenance, context
+assembly, hybrid recall, default write denial, and gated writes against a
+temporary memory root.
 
 The MCP v1 contract is a checked-in client-facing artifact. Generate it after
 schema/tool changes and verify it during release checks:
@@ -89,11 +92,15 @@ python3 memorywiki_mcp_contract.py \
   write/root-override gates, and retrieval sidecar freshness.
 - `memorywiki_mcp_contract.py` verifies the stable MCP v1 tool contract: tool names,
   input/output JSON schema, invocation shape, defaults, and write-gate policy.
+- `docs/benchmarks/memorywiki-context-golden-cases.json` contains public-safe
+  context capsule cases for startup/profile scope separation,
+  prompt-injection neutralization, and raw source excerpt omission.
 - `retrieval_golden_eval.py` runs registry-backed project/global recall queries
   so retrieval changes can be judged against stable expectations. It reports
   required/optional case status, `min_rank` guardrail failures, rank, top-k pass
-  rate, mean reciprocal rank, optional expected scope/source constraints, and
-  failure reasons.
+  rate, mean reciprocal rank, optional expected scope/source constraints,
+  query-type slices, router/reranker mode, index schema version, MRR threshold
+  status, and failure reasons.
 - `docs/memorywiki-golden-cases.json` is the formal golden eval registry. Global cases
   always load; project cases merge when the project root path or basename
   matches. Cases can include `required`, `min_rank`, `severity`, `owner`, and

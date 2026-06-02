@@ -15,7 +15,7 @@ def test_release_check_builds_expected_core_commands():
         test_python="/usr/bin/python3",
         repo_root="/repo",
         project_root="/repo/.agent_memory/project",
-        global_root="/home/me/.agent_memory/global",
+        global_root="/workspace/.agent_memory/global",
         config="/repo/.mcp.json",
         project_matrix_config="/repo/examples/project-matrix.example.json",
         mcp_contract="/repo/docs/memorywiki-mcp-v1-contract.json",

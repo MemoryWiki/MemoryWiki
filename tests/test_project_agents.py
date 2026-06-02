@@ -24,6 +24,8 @@ def test_render_agents_md_declares_memorywiki_as_source_of_truth():
     assert "export MEMORY_TIMEZONE=\"${MEMORY_TIMEZONE:-UTC}\"" in text
     assert "memory_index_maintain.py" in text
     assert "--write" in text
+    assert "memorywiki_context.py" in text
+    assert "--mode startup" in text
     assert "--strategy hybrid" in text
     assert "--embedding local" in text
     assert "--graph local" in text
@@ -44,6 +46,7 @@ def test_render_agents_md_declares_memorywiki_as_source_of_truth():
     assert "memory_crystallize.py" in text
     assert "agent_leases.py" in text
     assert "MCP Memory Bridge" in text
+    assert 'memorywiki_context(mode="startup")' in text
     assert "memorywiki_mcp.client_config" in text
     assert "memorywiki_mcp.smoke_client" in text
     assert "memorywiki_mcp_doctor.py" in text

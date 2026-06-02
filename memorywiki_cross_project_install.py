@@ -77,7 +77,7 @@ def render_managed_agents_block(memory_home: str | Path, python: str | Path | No
 ## MemoryWiki MCP Memory Bridge
 
 - Prefer the local `memorywiki-memory` MCP server for startup context when available.
-- Use `memorywiki_index_maintain(write=false)`, `memorywiki_recall(strategy="hybrid")`, and bounded `memorywiki_read_memory` before falling back to CLI reads.
+- Use `memorywiki_context(mode="startup")` first, then `memorywiki_recall(strategy="hybrid")` and bounded `memorywiki_read_memory` only as progressive deepening.
 - Keep MCP read-only by default. Do not set `MEMORY_MCP_WRITE_ENABLED` unless the user explicitly asks to save, update, or forget memory.
 - Do not set `MEMORY_GLOBAL_WRITE_ENABLED` unless the user explicitly asks for a global write.
 - Run `memorywiki_quality_report.py` in read-only mode before longer MemoryWiki maintenance work.
@@ -102,6 +102,24 @@ PYTHONPATH={memory_home!r} \\
   --project-root "$(pwd)/.agent_memory/project" \\
   --global-root "${{MEMORY_GLOBAL_ROOT:-$HOME/.agent_memory/global}}" \\
   --config "$(pwd)/.mcp.json"
+```
+
+- Assemble the startup context capsule:
+
+```bash
+if [ -z "${{MEMORYWIKI_MCP_PYTHON:-}}" ]; then
+  MCP_PYTHON={python_shell}
+else
+  MCP_PYTHON="$MEMORYWIKI_MCP_PYTHON"
+fi
+PYTHONPATH={memory_home!r} \\
+"$MCP_PYTHON" {context!r} \\
+  --project-root "$(pwd)/.agent_memory/project" \\
+  --global-root "${{MEMORY_GLOBAL_ROOT:-$HOME/.agent_memory/global}}" \\
+  --scope all \\
+  --mode startup \\
+  --query "current status next steps blockers" \\
+  --format markdown
 ```
 
 - Check retrieval quality with:
@@ -188,6 +206,7 @@ PYTHONPATH={memory_home!r} \\
         memory_home=memory_home_text,
         python_shell=python_shell,
         doctor=str(Path(memory_home_text) / "memorywiki_mcp_doctor.py"),
+        context=str(Path(memory_home_text) / "memorywiki_context.py"),
         eval=str(Path(memory_home_text) / "retrieval_golden_eval.py"),
         quality=str(Path(memory_home_text) / "memorywiki_quality_report.py"),
         knowledge_ops=str(Path(memory_home_text) / "memorywiki_knowledge_ops.py"),

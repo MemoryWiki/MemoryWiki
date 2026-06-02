@@ -3,20 +3,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+from conftest import make_memory_store as _store
+
 from memory_system.models import ProceduralMemory, SemanticMemory, SessionFile
-from memory_system.paths import MemoryScopePaths
-from memory_system.store import ScopedMemoryStore
 from memorywiki_list import list_memories
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _store(root: Path, scope: str = "project") -> ScopedMemoryStore:
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, scope=scope),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
 
 
 def _seed_memory(root: Path, scope: str = "project") -> None:

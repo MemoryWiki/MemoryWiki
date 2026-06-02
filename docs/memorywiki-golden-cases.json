@@ -9,10 +9,12 @@
         "memorywiki-pkm-positioning",
         "memorywiki-overview"
       ],
+      "expected_source": "semantic",
       "tags": [
         "memorywiki",
         "mcp"
       ],
+      "query_type": "mcp",
       "required": true,
       "min_rank": 3,
       "severity": "core",
@@ -21,14 +23,16 @@
     },
     {
       "name": "memorywiki-pkm-positioning",
-      "query": "MemoryWiki local-first chat memory personal knowledge management source ingest crystallize",
+      "query": "MemoryWiki combines chat memory with personal knowledge management local-first Markdown",
       "expected": [
         "memorywiki-pkm-positioning"
       ],
+      "expected_source": "semantic",
       "tags": [
         "memorywiki",
         "pkm"
       ],
+      "query_type": "semantic",
       "required": true,
       "min_rank": 3,
       "severity": "core",
@@ -42,10 +46,12 @@
         "source-ingest-provenance",
         "source-sha256"
       ],
+      "expected_source": "semantic",
       "tags": [
         "memorywiki",
         "source-ingest"
       ],
+      "query_type": "source_provenance",
       "required": true,
       "min_rank": 3,
       "severity": "core",
@@ -59,10 +65,12 @@
         "lifecycle-governance",
         "memory-lifecycle"
       ],
+      "expected_source": "semantic",
       "tags": [
         "memorywiki",
         "lifecycle"
       ],
+      "query_type": "lifecycle",
       "required": true,
       "min_rank": 3,
       "severity": "core",
@@ -76,10 +84,12 @@
         "cross-project-recall",
         "memorywiki-mcp"
       ],
+      "expected_source": "semantic",
       "tags": [
         "memorywiki",
         "mcp"
       ],
+      "query_type": "cross_project",
       "required": true,
       "min_rank": 3,
       "severity": "core",
@@ -92,10 +102,12 @@
       "expected": [
         "privacy-public-clean"
       ],
+      "expected_source": "semantic",
       "tags": [
         "memorywiki",
         "privacy"
       ],
+      "query_type": "safety",
       "required": false,
       "min_rank": 8,
       "severity": "watch",
@@ -108,10 +120,12 @@
       "expected": [
         "operator-quality-loop"
       ],
+      "expected_source": "semantic",
       "tags": [
         "memorywiki",
         "quality"
       ],
+      "query_type": "ops",
       "required": false,
       "min_rank": 8,
       "severity": "watch",

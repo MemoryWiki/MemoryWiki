@@ -3,19 +3,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+from conftest import make_memory_store as _store
+
 from memory_system.models import AuditEntry, SemanticMemory, SessionFile, SourceRef
-from memory_system.paths import MemoryScopePaths
-from memory_system.store import ScopedMemoryStore
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _store(root):
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, scope="project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
 
 
 def test_timeline_json_includes_sessions_semantic_memory_and_audit(tmp_path):

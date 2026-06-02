@@ -46,6 +46,17 @@ def test_client_config_can_explicitly_enable_write_gates(tmp_path):
     assert env["MEMORY_MCP_ALLOW_ROOT_OVERRIDE"] == "true"
 
 
+def test_client_config_records_client_profile_without_enabling_writes(tmp_path):
+    repo_root = tmp_path / "repo"
+    repo_root.mkdir()
+
+    payload = build_mcp_json(repo_root=repo_root, client="claude-code")
+
+    env = payload["mcpServers"]["memorywiki-memory"]["env"]
+    assert payload["x-memorywiki"]["client"] == "claude-code"
+    assert "MEMORY_MCP_WRITE_ENABLED" not in env
+
+
 def test_client_config_output_rejects_symlink_target(tmp_path):
     outside = tmp_path / "outside.json"
     outside.write_text("keep me\n", encoding="utf-8")

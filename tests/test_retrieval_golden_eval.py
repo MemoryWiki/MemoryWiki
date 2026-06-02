@@ -134,6 +134,7 @@ def test_retrieval_golden_eval_enforces_required_min_rank(tmp_path, monkeypatch)
                 name="rank-guard",
                 query="Shared MemoryWiki governance target",
                 expected=["target-memory"],
+                query_type="semantic",
                 min_rank=1,
                 required=True,
                 severity="core",
@@ -152,6 +153,8 @@ def test_retrieval_golden_eval_enforces_required_min_rank(tmp_path, monkeypatch)
     assert "min_rank" in payload["cases"][0]["failure_reason"]
     assert payload["cases"][0]["owner"] == "memorywiki"
     assert payload["cases"][0]["project"] == "demo-project"
+    assert payload["cases"][0]["query_type"] == "semantic"
+    assert payload["query_type_metrics"]["semantic"]["required_total"] == 1
 
 
 def test_retrieval_golden_eval_optional_failure_does_not_fail_required_set(tmp_path):
@@ -232,6 +235,7 @@ def test_load_cases_merges_registry_global_and_matching_project_cases(tmp_path):
                             "expected": ["project-target"],
                             "expected_scope": "project",
                             "expected_source": "semantic",
+                            "query_type": "cross_project",
                             "required": False,
                             "min_rank": 3,
                             "severity": "watch",
@@ -258,12 +262,195 @@ def test_load_cases_merges_registry_global_and_matching_project_cases(tmp_path):
     assert [case.name for case in cases] == ["global-case", "project-case"]
     assert cases[1].expected_scope == "project"
     assert cases[1].expected_source == "semantic"
+    assert cases[1].query_type == "cross_project"
+
+
+def test_retrieval_golden_eval_passes_router_and_reranker_flags_to_recall(
+    tmp_path,
+    monkeypatch,
+):
+    project_root = tmp_path / "project"
+    global_root = tmp_path / "global"
+    seen = {}
+
+    def fake_recall(args):
+        seen["granularity_router"] = args.granularity_router
+        seen["association_reranker"] = args.association_reranker
+        seen["ranker"] = args.ranker
+        return SimpleNamespace(
+            hits=[
+                SimpleNamespace(
+                    scope="project",
+                    source="semantic",
+                    identifier="target-memory",
+                    title="Target",
+                    excerpt="target memory text",
+                    score=2.0,
+                    provenance=[],
+                )
+            ],
+            warnings=[],
+        )
+
+    monkeypatch.setattr(retrieval_golden_eval, "recall", fake_recall)
+
+    payload = run_golden_eval(
+        project_root=project_root,
+        global_root=global_root,
+        cases=[
+            RetrievalCase(
+                name="router-case",
+                query="target memory",
+                expected=["target-memory"],
+                query_type="view_router",
+            )
+        ],
+        min_pass_rate=1.0,
+        ranker="score",
+        granularity_router="entropy",
+        association_reranker="local",
+        index_schema_version=3,
+        baseline_run_id="baseline-001",
+    )
+
+    assert payload["status"] == "pass"
+    assert seen == {
+        "granularity_router": "entropy",
+        "association_reranker": "local",
+        "ranker": "score",
+    }
+    assert payload["granularity_router"] == "entropy"
+    assert payload["association_reranker"] == "local"
+    assert payload["index_schema_version"] == 3
+    assert payload["baseline_run_id"] == "baseline-001"
+    assert payload["query_type_metrics"]["view_router"]["pass_rate"] == 1.0
+
+
+def test_retrieval_golden_eval_attaches_baseline_rank_deltas(tmp_path, monkeypatch):
+    project_root = tmp_path / "project"
+    global_root = tmp_path / "global"
+
+    def fake_recall(args):
+        return SimpleNamespace(
+            hits=[
+                SimpleNamespace(
+                    scope="project",
+                    source="semantic",
+                    identifier="target-memory",
+                    title="Target",
+                    excerpt="target memory text",
+                    score=2.0,
+                    provenance=[],
+                )
+            ],
+            warnings=[],
+        )
+
+    monkeypatch.setattr(retrieval_golden_eval, "recall", fake_recall)
+
+    payload = run_golden_eval(
+        project_root=project_root,
+        global_root=global_root,
+        cases=[
+            RetrievalCase(
+                name="delta-case",
+                query="target memory",
+                expected=["target-memory"],
+            )
+        ],
+        min_pass_rate=1.0,
+        baseline={
+            "cases": [
+                {
+                    "name": "delta-case",
+                    "rank": 3,
+                    "passed": False,
+                }
+            ]
+        },
+    )
+
+    assert payload["cases"][0]["baseline"]["old_rank"] == 3
+    assert payload["cases"][0]["baseline"]["new_rank"] == 1
+    assert payload["cases"][0]["baseline"]["rank_delta"] == -2
+    assert payload["cases"][0]["baseline"]["pass_transition"] == "False->True"
+    assert payload["cases"][0]["baseline"]["top_hit_changed"] is True
+
+
+def test_retrieval_golden_eval_enforces_min_mrr_and_required_regression_gate(
+    tmp_path,
+    monkeypatch,
+):
+    project_root = tmp_path / "project"
+    global_root = tmp_path / "global"
+
+    def fake_recall(args):
+        return SimpleNamespace(
+            hits=[
+                SimpleNamespace(
+                    scope="project",
+                    source="semantic",
+                    identifier="wrong-memory",
+                    title="Wrong",
+                    excerpt="wrong memory text",
+                    score=2.0,
+                    provenance=[],
+                )
+            ],
+            warnings=[],
+        )
+
+    monkeypatch.setattr(retrieval_golden_eval, "recall", fake_recall)
+
+    payload = run_golden_eval(
+        project_root=project_root,
+        global_root=global_root,
+        cases=[
+            RetrievalCase(
+                name="regression-case",
+                query="target memory",
+                expected=["target-memory"],
+                required=True,
+            )
+        ],
+        min_pass_rate=0.0,
+        min_mrr=0.9,
+        fail_on_required_regression=True,
+        baseline={
+            "cases": [
+                {
+                    "name": "regression-case",
+                    "rank": 1,
+                    "passed": True,
+                    "top_hits": [
+                        {
+                            "scope": "project",
+                            "source": "semantic",
+                            "identifier": "target-memory",
+                        }
+                    ],
+                }
+            ]
+        },
+    )
+
+    assert payload["status"] == "fail"
+    assert payload["mrr_ok"] is False
+    assert payload["required_regression_count"] == 1
 
 
 def test_default_golden_cases_do_not_include_private_session_ids():
     encoded = json.dumps([case.__dict__ for case in DEFAULT_CASES])
 
     assert "session-" not in encoded
+
+
+def test_private_golden_registry_is_not_packaged_for_public_builds():
+    pyproject = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(
+        encoding="utf-8"
+    )
+
+    assert '"docs/memorywiki-golden-cases.json"' not in pyproject
 
 
 def test_load_cases_falls_back_to_installed_default_registry(tmp_path, monkeypatch):

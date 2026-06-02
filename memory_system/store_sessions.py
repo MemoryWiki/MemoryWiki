@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from memory_system.models import EpisodeFile, SessionFile, SessionMeta
 from memory_system.store_io import MAX_MANAGED_FILES
 
 
 def write_session(store: Any, session: SessionFile) -> Path:
-    path = store.paths.session_file(session.id)
+    path = cast(Path, store.paths.session_file(session.id))
     content = store._serialize_session_file(session)
     with store._file_lock():
         store._atomic_write_text_unlocked(path, content)
@@ -23,7 +23,7 @@ def read_session(store: Any, session_id: str) -> SessionFile | None:
     store._assert_safe_managed_path(path)
     if not path.exists():
         return None
-    return store._parse_session_file(store._sanitize(store._read_text_bounded(path)))
+    return cast(SessionFile, store._parse_session_file(store._sanitize(store._read_text_bounded(path))))
 
 
 def list_sessions(store: Any, limit: int = 30) -> list[SessionMeta]:
@@ -59,7 +59,7 @@ def append_to_episode(
     body: str,
     session_meta: SessionMeta | None = None,
 ) -> Path:
-    path = store.paths.episode_for_date(date_text)
+    path = cast(Path, store.paths.episode_for_date(date_text))
     heading = store._episode_heading(section_title)
     body_block = f"{heading}\n\n{store._sanitize(body).strip()}"
     with store._file_lock():
@@ -102,10 +102,10 @@ def read_episode(store: Any, date_text: str) -> EpisodeFile | None:
     store._assert_safe_managed_path(path)
     if not path.exists():
         return None
-    return store._parse_episode_file(
+    return cast(EpisodeFile, store._parse_episode_file(
         store._sanitize(store._read_text_bounded(path)),
         fallback_date=date_text,
-    )
+    ))
 
 
 def list_episodes(store: Any, since: str | int | None = None) -> list[str]:

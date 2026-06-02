@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 IDENTIFIER_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 SESSION_RE = re.compile(r"^session-[A-Za-z0-9][A-Za-z0-9_.-]*$")
@@ -20,6 +20,9 @@ class RecallInput(BaseModel):
     embedding: Literal["off", "local"] = "off"
     graph: Literal["off", "local"] = "local"
     ranker: Literal["rrf", "score"] = "rrf"
+    granularity_router: Literal["off", "static", "entropy"] = "off"
+    association_reranker: Literal["off", "local"] = "off"
+    index_schema_version: Optional[int] = Field(default=None, ge=1, le=10)
     strategy: Literal["live", "indexed", "hybrid"] = "hybrid"
     explain_score: bool = False
     refresh_index_if_needed: bool = False
@@ -46,6 +49,64 @@ class RecallOutput(BaseModel):
     truncated: bool
     warnings: List[str] = Field(default_factory=list)
     hits: List[RecallHitOutput] = Field(default_factory=list)
+
+
+class ContextInput(BaseModel):
+    scope: Literal["all", "project", "global"] = "all"
+    mode: Literal["startup", "task", "handoff", "profile"] = "startup"
+    query: Optional[str] = Field(default=None, max_length=10_000)
+    limit: int = Field(default=5, ge=1, le=50)
+    token_budget: int = Field(default=1200, ge=1, le=100_000)
+    max_chars: int = Field(default=6_000, ge=1_000, le=50_000)
+    include_recall: bool = Field(
+        default=False,
+        description=(
+            "Force task recall when the selected mode would otherwise skip it; "
+            "startup and handoff modes already run bounded recall automatically."
+        ),
+    )
+    include_health: bool = True
+    include_actions: bool = True
+    include_excerpts: bool = False
+    embedding: Literal["off", "local"] = "local"
+    graph: Literal["off", "local"] = "local"
+    strategy: Literal["live", "indexed", "hybrid"] = "hybrid"
+    refresh_index_if_needed: bool = False
+    project_root: Optional[str] = None
+    global_root: Optional[str] = None
+
+
+class ContextItemOutput(BaseModel):
+    scope: str
+    kind: str
+    identifier: str
+    title: str
+    summary: str = ""
+    source: str = ""
+    confidence: Optional[float] = None
+    strength: Optional[float] = None
+    freshness: str = ""
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    actions: Dict[str, Any] = Field(default_factory=dict)
+
+
+class ContextOutput(BaseModel):
+    model_config = ConfigDict(populate_by_name=True, serialize_by_alias=True)
+
+    schema_version: str = Field(alias="schema")
+    generated_at: str
+    mode: str
+    scope: str
+    read_only: bool
+    memory_priority: str
+    metadata_first: bool
+    query: str = ""
+    stable_profile: List[ContextItemOutput] = Field(default_factory=list)
+    dynamic_activity: List[ContextItemOutput] = Field(default_factory=list)
+    task_recall: List[ContextItemOutput] = Field(default_factory=list)
+    warnings: List[str] = Field(default_factory=list)
+    actions: List[str] = Field(default_factory=list)
+    truncated: bool = False
 
 
 class ListInput(BaseModel):

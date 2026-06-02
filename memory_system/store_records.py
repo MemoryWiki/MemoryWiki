@@ -60,7 +60,7 @@ def list_source_documents(store: Any, limit: int = 100) -> list[Path]:
 
 
 def read_audit(store: Any, limit: int = 100) -> list[AuditEntry]:
-    rows = []
+    rows: list[AuditEntry] = []
     if not store.paths.audit_log.exists():
         return rows
     try:
@@ -101,7 +101,7 @@ def append_session_summary(store: Any, summary: SessionSummary) -> None:
 
 
 def read_session_summaries(store: Any, limit: int = 10) -> list[SessionSummary]:
-    rows = []
+    rows: list[SessionSummary] = []
     if not store.paths.sessions.exists():
         return rows
     try:

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from memory_system.models import ProceduralMemory
 
 
 def write_procedural_memory(store: Any, item: ProceduralMemory) -> Path:
-    path = store.paths.procedure_file(item.id)
+    path = cast(Path, store.paths.procedure_file(item.id))
     content = store._serialize_procedural_memory(item)
     with store._file_lock():
         store._atomic_write_text_unlocked(path, content)
@@ -22,10 +22,10 @@ def read_procedural_memory(store: Any, memory_id: str) -> ProceduralMemory | Non
     store._assert_safe_managed_path(path)
     if not path.exists():
         return None
-    return store._parse_procedural_memory(
+    return cast(ProceduralMemory, store._parse_procedural_memory(
         store._sanitize(store._read_text_bounded(path)),
         fallback_id=memory_id,
-    )
+    ))
 
 
 def list_procedural_memories(store: Any, limit: int = 100) -> list[ProceduralMemory]:

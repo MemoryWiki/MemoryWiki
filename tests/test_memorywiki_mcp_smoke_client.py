@@ -48,14 +48,16 @@ def test_readonly_smoke_lists_tools_runs_recall_and_checks_denied_write():
 
     assert payload["tools"] == list(TOOL_NAMES)
     assert payload["index"]["tool"] == "memorywiki_index_maintain"
+    assert payload["context"]["tool"] == "memorywiki_context"
     assert payload["recall"]["tool"] == "memorywiki_recall"
     assert payload["default_write_denied"] is True
     assert [name for name, _ in session.calls] == [
         "memorywiki_index_maintain",
+        "memorywiki_context",
         "memorywiki_recall",
         "memorywiki_write_session",
     ]
-    recall_payload = session.calls[1][1]["input"]
+    recall_payload = session.calls[2][1]["input"]
     assert recall_payload["query"] == "launch readiness"
     assert recall_payload["strategy"] == "hybrid"
     assert recall_payload["token_budget"] == 800

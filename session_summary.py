@@ -186,7 +186,7 @@ def main() -> None:
             _reject_stdin_routing_fields(parser, stdin_payload)
         legacy_keypoints = _split_csv(args.keypoints)
         legacy_actions = _split_csv(args.actions)
-        legacy_pending = []
+        legacy_pending: list[str] = []
         pending_flags = args.pending or []
         if any("," in item for item in pending_flags):
             print(

@@ -9,7 +9,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from memorywiki_mcp.client_config import build_server_config
 from memorywiki_mcp.server import TOOL_NAMES
@@ -18,10 +18,10 @@ from memorywiki_mcp.server import TOOL_NAMES
 def _structured(result: Any) -> dict[str, Any]:
     payload = getattr(result, "structuredContent", None)
     if isinstance(payload, dict):
-        return payload
+        return cast(dict[str, Any], payload)
     content = getattr(result, "content", None) or []
     if content and getattr(content[0], "text", None):
-        return json.loads(content[0].text)
+        return cast(dict[str, Any], json.loads(content[0].text))
     return {}
 
 
@@ -33,6 +33,17 @@ async def _call_readonly(session: Any, query: str) -> dict[str, Any]:
         raise RuntimeError("Missing MemoryWiki MCP tools: {}".format(", ".join(missing)))
 
     index = await session.call_tool("memorywiki_index_maintain", {"input": {"scope": "all"}})
+    context = await session.call_tool(
+        "memorywiki_context",
+        {
+            "input": {
+                "scope": "all",
+                "mode": "startup",
+                "query": query,
+                "max_chars": 4_000,
+            }
+        },
+    )
     recall = await session.call_tool(
         "memorywiki_recall",
         {
@@ -58,6 +69,7 @@ async def _call_readonly(session: Any, query: str) -> dict[str, Any]:
     return {
         "tools": names,
         "index": _structured(index),
+        "context": _structured(context),
         "recall": _structured(recall),
         "default_write_denied": bool(getattr(denied_write, "isError", False)),
     }

@@ -19,6 +19,8 @@ def test_mcp_contract_records_all_tools_and_write_gates():
     assert payload["invocation"]["argument"] == "input"
     assert tuple(tools) == TOOL_NAMES
     assert tools["memorywiki_recall"]["input_schema"]["properties"]["query"]["type"] == "string"
+    assert tools["memorywiki_context"]["input_schema"]["properties"]["mode"]["default"] == "startup"
+    assert tools["memorywiki_context"]["defaults"]["max_chars"] == 6000
     assert tools["memorywiki_write_session"]["write_gated"] is True
     assert tools["memorywiki_ingest_source"]["defaults"]["dry_run"] is True
     assert len(payload["contract_sha256"]) == 64

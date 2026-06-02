@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 
+_OpenAI: Any = None
 try:
-    from openai import OpenAI
+    from openai import OpenAI as _ImportedOpenAI
+
+    _OpenAI = _ImportedOpenAI
 except ImportError:
-    OpenAI = None
+    pass
+
+OpenAI: Any = _OpenAI
 
 
 class OpenAIChatClient:

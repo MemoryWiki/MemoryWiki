@@ -14,6 +14,8 @@ from pydantic import BaseModel
 from memorywiki_mcp.schema import (
     CrystallizeInput,
     CrystallizeOutput,
+    ContextInput,
+    ContextOutput,
     ForgetInput,
     ForgetOutput,
     IndexMaintainInput,
@@ -34,6 +36,7 @@ from memorywiki_mcp.server import TOOL_NAMES, tool_specs
 SCHEMA = "memorywiki-mcp-contract-v1"
 INPUT_MODELS: dict[str, type[BaseModel]] = {
     "memorywiki_recall": RecallInput,
+    "memorywiki_context": ContextInput,
     "memorywiki_list": ListInput,
     "memorywiki_read_memory": ReadMemoryInput,
     "memorywiki_index_maintain": IndexMaintainInput,
@@ -44,6 +47,7 @@ INPUT_MODELS: dict[str, type[BaseModel]] = {
 }
 OUTPUT_MODELS: dict[str, type[BaseModel]] = {
     "memorywiki_recall": RecallOutput,
+    "memorywiki_context": ContextOutput,
     "memorywiki_list": ListOutput,
     "memorywiki_read_memory": ReadMemoryOutput,
     "memorywiki_index_maintain": IndexMaintainOutput,

@@ -78,6 +78,37 @@ def test_from_env_reads_memorywiki_toml_relative_paths(tmp_path, monkeypatch):
     assert cfg.chat_write_enabled is True
 
 
+def test_from_env_reads_non_secret_openai_config_from_memorywiki_toml(
+    tmp_path, monkeypatch
+):
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    project = tmp_path / "repo"
+    project.mkdir()
+    (project / ".memorywiki.toml").write_text(
+        "\n".join(
+            [
+                "[memorywiki]",
+                'backend = "openai"',
+                'openai_base_url = "https://example.test/v1"',
+                "openai_timeout_seconds = 45",
+                "openai_max_retries = 4",
+                "openai_max_output_tokens = 4096",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(project)
+
+    cfg = MemoryConfig.from_env()
+
+    assert cfg.backend == "openai"
+    assert cfg.openai_base_url == "https://example.test/v1"
+    assert cfg.openai_timeout_seconds == 45
+    assert cfg.openai_max_retries == 4
+    assert cfg.openai_max_output_tokens == 4096
+    assert cfg.openai_api_key is None
+
+
 def test_from_env_reads_canonical_user_memory_path(tmp_path, monkeypatch):
     canonical_user = tmp_path / "cowork" / "memory" / "USER.md"
     monkeypatch.setenv("MEMORY_CANONICAL_USER_PATH", str(canonical_user))

@@ -3,7 +3,7 @@
 [![CI](https://github.com/MemoryWiki/MemoryWiki/actions/workflows/ci.yml/badge.svg)](https://github.com/MemoryWiki/MemoryWiki/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.9--3.13-blue)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
-![Status](https://img.shields.io/badge/status-v0.1.0%20candidate-orange)
+![Status](https://img.shields.io/badge/status-v0.1.1%20candidate-orange)
 
 本地优先的 AI Agent 记忆 Wiki：**可 grep、可 diff、可备份、可删除，并可通过
 CLI 或 MCP recall。**
@@ -15,6 +15,13 @@ MemoryWiki 给 coding agent / chat agent 一个可长期维护的项目记忆层
 它适合想要 agent 记忆、但不想把项目历史交给云端记忆服务的人。
 
 ![MemoryWiki quickstart demo](docs/assets/memorywiki-quickstart.gif)
+
+## 最近更新
+
+- CI 现在对 core 和 MCP 模块跑完整 `mypy` 类型检查。
+- `memorywiki-export` / `mw export` 支持 JSON、Markdown、CSV 导出。
+- `mw` alias 覆盖日常 recall、review、release 和迁移工具。
+- 公开 examples 现在包含 demo project、MCP config 和样例 memory root。
 
 ## 核心特点
 
@@ -90,12 +97,15 @@ git clone https://github.com/MemoryWiki/MemoryWiki.git
 cd MemoryWiki
 python3 -m pip install -e ".[mcp]"
 memorywiki-index-maintain --project-root examples/memory-root --scope project --format human
+memorywiki-context --project-root examples/memory-root --scope project --mode startup --query "What is MemoryWiki?" --format markdown
 memorywiki-recall --project-root examples/memory-root --scope project --query "What is MemoryWiki?" --strategy hybrid --embedding local --graph local --format human
 ```
 
 预期输出形态：
 
 ```text
+# MemoryWiki Context
+
 # Memory Recall
 
 1. [project/semantic] MemoryWiki Overview (memorywiki-overview, score ...)
@@ -130,6 +140,15 @@ memorywiki-list \
   --scope project \
   --kind semantic \
   --format table
+```
+
+只读查看可 crystallize 的 construction candidates：
+
+```bash
+memorywiki-construction-report \
+  --project-root examples/memory-root \
+  --scope project \
+  --format markdown
 ```
 
 显式保存一轮会话总结：
@@ -231,22 +250,12 @@ PYTHONPATH=. python3 benchmarks/mini_recall_benchmark.py --format markdown
 python3 -m pytest tests -q
 ```
 
-## 项目治理
+## 项目状态
 
-公开发布准备文件：
-
-- `SECURITY.md`
-- `CONTRIBUTING.md`
-- `CODE_OF_CONDUCT.md`
-- `CHANGELOG.md`
-- `docs/faq.md`
-- `docs/getting-started/quickstart.md`
-- `docs/troubleshooting/common-errors.md`
-- `docs/internal/first-week-feedback.md`
-- `docs/internal/launch/github-publication-checklist.md`
-- `docs/internal/launch/public-go-live-runbook.md`
-- `docs/internal/launch/release-playbook.md`
-- `docs/internal/launch/marketing-plan.md`
+MemoryWiki 仍是早期公开版本，但核心 CLI、存储模型、retrieval index、MCP、
+release check 和测试已经就绪。首次使用建议先看
+`docs/getting-started/quickstart.md`、`docs/faq.md`、`SECURITY.md` 和
+`CHANGELOG.md`；更完整文档在 `docs/`。
 
 ## 安全模型
 

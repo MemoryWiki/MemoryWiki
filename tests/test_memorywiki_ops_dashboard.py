@@ -6,22 +6,13 @@ import sys
 from pathlib import Path
 
 import pytest
+from conftest import make_memory_store as _store
 
 from memory_review import write_golden_candidates_to_pending
 from memory_system.models import SemanticMemory
-from memory_system.paths import MemoryScopePaths
-from memory_system.store import ScopedMemoryStore
 from memorywiki_ops_dashboard import render_html, render_markdown, run_ops_dashboard
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _store(root: Path) -> ScopedMemoryStore:
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, "project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
 
 
 def _write_semantic(root: Path, memory_id: str, content: str) -> None:

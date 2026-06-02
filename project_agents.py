@@ -66,7 +66,21 @@ python3 "$MEMORY_SYSTEM_HOME/memory_index_maintain.py" \\
   --format human
 ```
 
-3. Read global and project memory in read-only mode. Use index/profile first to locate relevant pages:
+3. Assemble a profile-first startup context capsule in read-only mode:
+
+```bash
+PYTHONPATH="$MEMORY_SYSTEM_HOME" \\
+python3 "$MEMORY_SYSTEM_HOME/memorywiki_context.py" \\
+  --project-root "$(pwd)/.agent_memory/project" \\
+  --global-root "${{MEMORY_GLOBAL_ROOT:-$HOME/.agent_memory/global}}" \\
+  --scope all \\
+  --mode startup \\
+  --query "current status next steps blockers" \\
+  --token-budget 1200 \\
+  --format markdown
+```
+
+4. If the work is topic specific, run focused recall before changing files:
 
 ```bash
 PYTHONPATH="$MEMORY_SYSTEM_HOME" \\
@@ -82,7 +96,9 @@ python3 "$MEMORY_SYSTEM_HOME/memory_recall.py" \\
   --format human
 ```
 
-4. If the work is topic-specific, run another recall query for that topic before changing files.
+Use recall/read as progressive deepening after the startup capsule, not as the
+first memory surface.
+
 5. Optionally run the unified read-only quality report before longer MemoryWiki work:
 
 ```bash
@@ -151,7 +167,7 @@ python3 "$MEMORY_SYSTEM_HOME/memory_lifecycle.py" \\
 ## MCP Memory Bridge
 
 - If an MCP client is available, prefer the `memorywiki-memory` server for startup context.
-- Use `memorywiki_index_maintain(write=false)`, `memorywiki_recall(strategy="hybrid")`, and bounded `memorywiki_read_memory` before falling back to CLI reads.
+- Use `memorywiki_context(mode="startup")` first, then `memorywiki_recall(strategy="hybrid")` and bounded `memorywiki_read_memory` only as progressive deepening.
 - Keep MCP read-only by default. Do not set `MEMORY_MCP_WRITE_ENABLED` unless the user explicitly asks to save, update, or forget memory.
 - Do not set `MEMORY_GLOBAL_WRITE_ENABLED` unless the user explicitly asks for a global write.
 - Install or refresh another project's bridge with:

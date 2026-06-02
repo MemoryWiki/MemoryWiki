@@ -316,6 +316,7 @@ def run_quality_report(
         "golden_proposal_count": len(review_raw["golden_proposals"]),
         "repair_proposal_count": len(review_raw["repair_proposals"]),
         "pending_candidate_count": review_raw["pending_candidate_count"],
+        "construction_candidate_count": review_raw.get("construction_candidate_count", 0),
         "lifecycle_proposal_count": review_raw["lifecycle_proposal_count"],
         "review_inbox": review_raw["review_inbox"][:25],
     }
@@ -394,6 +395,7 @@ def render_human(payload: dict[str, Any]) -> str:
         % ("yes" if payload["index"]["rebuild_needed"] else "no"),
         "Health issues: {}".format(payload["health"]["issue_count"]),
         "Review inbox: {}".format(payload["review"]["review_inbox_count"]),
+        "Construction candidates: {}".format(payload["review"]["construction_candidate_count"]),
         "Review-due memories: {}".format(payload["freshness"]["review_due_count"]),
         "Lifecycle proposals: {}".format(payload["lifecycle"]["proposal_count"]),
         "Feedback rows: {}".format(payload["feedback"]["row_count"]),

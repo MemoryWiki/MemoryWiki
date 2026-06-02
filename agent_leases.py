@@ -8,11 +8,14 @@ import uuid
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
+from types import ModuleType
 
 try:
-    import fcntl
+    import fcntl as _fcntl
 except ImportError:  # pragma: no cover - non-POSIX fallback
-    fcntl = None
+    fcntl: ModuleType | None = None
+else:
+    fcntl = _fcntl
 
 
 DEFAULT_TTL_SECONDS = 3600
@@ -69,9 +72,10 @@ def _lease_lock(root: Path):
     flags = os.O_CREAT | os.O_RDWR
     if hasattr(os, "O_NOFOLLOW"):
         flags |= os.O_NOFOLLOW
-    fd = os.open(lock_path, flags, 0o600)
+    fd: int | None = os.open(lock_path, flags, 0o600)
     handle = None
     try:
+        assert fd is not None
         handle = os.fdopen(fd, "a+")
         fd = None
         if fcntl is not None:
@@ -358,6 +362,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    payload: dict[str, object]
     try:
         if args.command == "acquire":
             payload = {

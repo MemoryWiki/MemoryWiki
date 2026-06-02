@@ -64,6 +64,11 @@ PATTERNS = [
 
 
 INSTRUCTION_SHAPED_PATTERNS = [
+    re.compile(r"\bignore\s+(?:all\s+)?previous\s+instructions?\b", re.IGNORECASE),
+    re.compile(
+        r"\b(?:disregard|dismiss|skip)\s+(?:all\s+)?(?:previous|prior|above|earlier)\s+instructions?\b",
+        re.IGNORECASE,
+    ),
     re.compile(
         r"\b(?:ignore|override|bypass|disable|forget)\b.{0,80}\b(?:system|developer|instruction|policy|safety|tool|memory)\b",
         re.IGNORECASE,
@@ -80,7 +85,7 @@ INSTRUCTION_SHAPED_PATTERNS = [
         r"\b(?:do not|don't|never)\b.{0,80}\b(?:follow|obey|comply)\b",
         re.IGNORECASE,
     ),
-    re.compile(r"(忽略|覆盖|绕过|不要遵守|作为系统|作为开发者|调用工具|执行命令)"),
+    re.compile(r"(忽略|无视|覆盖|绕过|不要遵守|不要服从|作为系统|作为开发者|调用工具|执行命令)"),
 ]
 
 

@@ -19,6 +19,10 @@ from memory_system.models import (
 UPDATE_LOG_HEADING = "## Update Log"
 
 
+def sanitized_text(store: Any, value: Any) -> str:
+    return str(store._sanitize(str(value)))
+
+
 def serialize_session_file(store: Any, session: SessionFile) -> str:
     frontmatter = [
         "---",
@@ -39,7 +43,7 @@ def serialize_session_file(store: Any, session: SessionFile) -> str:
         )
     )
     frontmatter.extend(["---", ""])
-    return "\n".join(frontmatter) + store._sanitize(session.body).strip() + "\n"
+    return "\n".join(frontmatter) + sanitized_text(store, session.body).strip() + "\n"
 
 
 def parse_session_file(store: Any, text: str) -> SessionFile:
@@ -94,7 +98,7 @@ def serialize_episode_file(store: Any, episode: EpisodeFile) -> str:
     else:
         frontmatter[-1] = "sessions: []"
     frontmatter.extend(["---", ""])
-    return "\n".join(frontmatter) + store._sanitize(episode.body).strip() + "\n"
+    return "\n".join(frontmatter) + sanitized_text(store, episode.body).strip() + "\n"
 
 
 def parse_episode_file(
@@ -136,7 +140,7 @@ def serialize_semantic_memory(store: Any, item: SemanticMemory) -> str:
     ]
     frontmatter.extend(frontmatter_string_list(store, "concepts", item.concepts))
     frontmatter.extend(["---", ""])
-    body = store._sanitize(item.content).strip()
+    body = sanitized_text(store, item.content).strip()
     update_log = [
         store._sanitize(entry).strip()
         for entry in item.update_log
@@ -208,7 +212,7 @@ def serialize_procedural_memory(store: Any, item: ProceduralMemory) -> str:
     ]
     frontmatter.extend(frontmatter_string_list(store, "steps", item.steps))
     frontmatter.extend(["---", ""])
-    return "\n".join(frontmatter) + store._sanitize(item.trigger).strip() + "\n"
+    return "\n".join(frontmatter) + sanitized_text(store, item.trigger).strip() + "\n"
 
 
 def parse_procedural_memory(
@@ -323,7 +327,7 @@ def sanitize_json(store: Any, value: Any) -> Any:
 
 
 def frontmatter_scalar(store: Any, value: str | int | None) -> str:
-    text = "" if value is None else store._sanitize(str(value))
+    text = "" if value is None else sanitized_text(store, value)
     return text.replace("\n", " ").strip()
 
 

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from memory_construction import run_construction_report
 from memory_crystallize_candidates import propose_candidates
 from memorywiki_operator_env import resolve_mcp_python
 from memorywiki_ops_dashboard import run_ops_dashboard
@@ -131,13 +132,38 @@ def _knowledge_loop(
     *,
     project_root: Path,
     candidates: dict[str, Any],
+    construction_report: dict[str, Any],
     recommendations: dict[str, Any],
     candidate_limit: int,
 ) -> dict[str, Any]:
     actions = _actions_by_category(recommendations, "knowledge-formation")
-    if candidates.get("candidate_count", 0):
+    construction_candidate_count = int(construction_report.get("candidate_count", 0))
+    if construction_candidate_count:
         actions.insert(
             0,
+            _action(
+                title="Review construction topic bundles",
+                summary=(
+                    f"{construction_candidate_count} topic bundle candidates can guide "
+                    "review-time crystallization."
+                ),
+                command=_command(
+                    "memorywiki_construction_report.py",
+                    "--project-root",
+                    project_root,
+                    "--scope",
+                    "project",
+                    "--limit",
+                    candidate_limit,
+                    "--format",
+                    "markdown",
+                ),
+                source="memory_construction",
+            ),
+        )
+    if candidates.get("candidate_count", 0):
+        actions.insert(
+            1 if construction_candidate_count else 0,
             _action(
                 title="Review crystallization candidates",
                 summary="{} stable-looking session or episode snippets are candidates for human review.".format(candidates.get("candidate_count", 0)),
@@ -154,7 +180,7 @@ def _knowledge_loop(
             ),
         )
         actions.insert(
-            1,
+            2 if construction_candidate_count else 1,
             _action(
                 title="Stage crystallization candidate queue",
                 summary="Append candidate proposals to _pending only after explicit approval; this does not promote memory.",
@@ -182,6 +208,10 @@ def _knowledge_loop(
         "signals": {
             "candidate_count": int(candidates.get("candidate_count", 0)),
             "candidate_queue_written": bool(candidates.get("written")),
+            "construction_candidate_count": construction_candidate_count,
+            "construction_skipped_inputs": int(
+                construction_report.get("metrics", {}).get("skipped_input_count", 0)
+            ),
         },
         "actions": actions,
     }
@@ -472,11 +502,18 @@ def run_knowledge_ops(
         limit=candidate_limit,
         write=stage_candidates,
     )
+    construction_report = run_construction_report(
+        project_root=project_root,
+        global_root=global_root,
+        scope="project",
+        limit=candidate_limit,
+    )
     recommendations = dashboard.get("recommendations", {})
     loops = [
         _knowledge_loop(
             project_root=project_root,
             candidates=candidates,
+            construction_report=construction_report,
             recommendations=recommendations,
             candidate_limit=candidate_limit,
         ),
@@ -485,7 +522,7 @@ def run_knowledge_ops(
             recommendations=recommendations,
             project_matrix_config=project_matrix_config,
             global_root=global_root,
-            python=python,
+            python=resolved_python,
         ),
         _retrieval_loop(
             dashboard=dashboard,
@@ -539,6 +576,7 @@ def run_knowledge_ops(
         ),
         "top_next_actions": top_actions,
         "knowledge_candidates": candidates,
+        "construction_report": construction_report,
         "dashboard_summary": {
             "status": dashboard.get("status"),
             "quality_status": dashboard.get("quality", {}).get("status"),

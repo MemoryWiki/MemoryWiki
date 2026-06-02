@@ -8,6 +8,8 @@ from ipaddress import ip_address
 from memorywiki_mcp.schema import (
     CrystallizeInput,
     CrystallizeOutput,
+    ContextInput,
+    ContextOutput,
     ForgetInput,
     ForgetOutput,
     IndexMaintainInput,
@@ -24,6 +26,7 @@ from memorywiki_mcp.schema import (
     WriteSessionOutput,
 )
 from memorywiki_mcp.tools import memorywiki_crystallize as run_crystallize
+from memorywiki_mcp.tools import memorywiki_context as run_context
 from memorywiki_mcp.tools import memorywiki_forget as run_forget
 from memorywiki_mcp.tools import memorywiki_index_maintain as run_index_maintain
 from memorywiki_mcp.tools import memorywiki_ingest_source as run_ingest_source
@@ -34,6 +37,7 @@ from memorywiki_mcp.tools import memorywiki_write_session as run_write_session
 
 TOOL_NAMES = (
     "memorywiki_recall",
+    "memorywiki_context",
     "memorywiki_list",
     "memorywiki_read_memory",
     "memorywiki_index_maintain",
@@ -51,6 +55,11 @@ def tool_specs() -> dict[str, dict]:
             "read_only": True,
             "write_gated": "refresh_index_if_needed",
             "description": "Hybrid recall over project/global MemoryWiki memory.",
+        },
+        "memorywiki_context": {
+            "read_only": True,
+            "write_gated": "refresh_index_if_needed",
+            "description": "Assemble a profile-first, metadata-first MemoryWiki context capsule.",
         },
         "memorywiki_list": {
             "read_only": True,
@@ -112,6 +121,11 @@ def create_server():
     def memorywiki_recall(input: RecallInput) -> RecallOutput:
         """Hybrid recall over local MemoryWiki memory with warnings and provenance."""
         return run_recall(input)
+
+    @mcp.tool()
+    def memorywiki_context(input: ContextInput) -> ContextOutput:
+        """Assemble a read-only, metadata-first MemoryWiki context capsule."""
+        return run_context(input)
 
     @mcp.tool()
     def memorywiki_list(input: ListInput) -> ListOutput:

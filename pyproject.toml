@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "memorywiki"
-version = "0.1.0"
+version = "0.1.1"
 description = "Local-first Memory Wiki for AI agents"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -33,7 +33,7 @@ dependencies = [
 dev = [
   "mypy>=1.10.0,<2.0.0",
   "pre-commit>=3.5.0,<5.0.0",
-  "pytest>=8.0.0,<9.0.0",
+  "pytest>=9.0.3,<10.0.0",
   "pytest-cov>=5.0.0,<7.0.0",
   "ruff>=0.4.0,<1.0.0",
   "bandit>=1.7.8,<2.0.0",
@@ -56,12 +56,17 @@ Changelog = "https://github.com/MemoryWiki/MemoryWiki/blob/main/CHANGELOG.md"
 [project.scripts]
 memorywiki-agents-review-prompt = "agents_review_prompt:main"
 memorywiki-backup = "memory_backup:main"
+memorywiki-construction-report = "memorywiki_construction_report:main"
+memorywiki-context = "memorywiki_context:main"
 memorywiki-crystallize = "memory_crystallize:main"
 memorywiki-crystallize-candidates = "memory_crystallize_candidates:main"
 memorywiki-config = "memorywiki_config:main"
+memorywiki-capture-ingest = "memory_capture_ingest:main"
 memorywiki-cross-project-install = "memorywiki_cross_project_install:main"
+memorywiki-export = "memorywiki_export:main"
 memorywiki-feedback = "memory_feedback:main"
 memorywiki-forget = "memory_forget:main"
+memorywiki-file-history = "memorywiki_file_history:main"
 memorywiki-golden-eval = "retrieval_golden_eval:main"
 memorywiki-health = "memory_health:main"
 memorywiki-index-build = "memory_index_build:main"
@@ -87,88 +92,20 @@ memorywiki-release-manifest = "memorywiki_release_manifest:main"
 memorywiki-restore-check = "memorywiki_restore_check:main"
 memorywiki-review = "memory_review:main"
 memorywiki-session-summary = "session_summary:main"
+memorywiki-status = "memorywiki_status:main"
 memorywiki-timeline = "memory_timeline:main"
 memorywiki-wake-prompt = "generate_wake_prompt:main"
 mw = "mw_cli:main"
 
-[tool.setuptools.data-files]
-"memorywiki" = [
-  "ROADMAP.md",
-]
-"memorywiki/docs" = [
-  "docs/*.json",
-  "docs/*.md",
-]
-"memorywiki/docs/assets" = [
-  "docs/assets/*",
-]
-"memorywiki/docs/benchmarks" = [
-  "docs/benchmarks/*.md",
-]
-"memorywiki/docs/clients" = [
-  "docs/clients/*.md",
-]
-"memorywiki/docs/getting-started" = [
-  "docs/getting-started/*.md",
-]
-"memorywiki/docs/troubleshooting" = [
-  "docs/troubleshooting/*.md",
-]
-"memorywiki/docs/user-guide" = [
-  "docs/user-guide/*.md",
-]
-"memorywiki/benchmarks" = [
-  "benchmarks/*.py",
-]
-"memorywiki/examples" = [
-  "examples/*.json",
-]
-"memorywiki/examples/mcp" = [
-  "examples/mcp/.mcp.example.json",
-  "examples/mcp/*.md",
-]
-"memorywiki/examples/memory-root" = [
-  "examples/memory-root/.gitignore",
-  "examples/memory-root/*.md",
-]
-"memorywiki/examples/memory-root/episodes" = [
-  "examples/memory-root/episodes/*.md",
-]
-"memorywiki/examples/memory-root/procedures" = [
-  "examples/memory-root/procedures/*.md",
-]
-"memorywiki/examples/memory-root/retrieval" = [
-  "examples/memory-root/retrieval/*.jsonl",
-]
-"memorywiki/examples/memory-root/semantic" = [
-  "examples/memory-root/semantic/*.md",
-]
-"memorywiki/examples/memory-root/sessions" = [
-  "examples/memory-root/sessions/*.md",
-]
-"memorywiki/examples/demo-project" = [
-  "examples/demo-project/.mcp.json",
-  "examples/demo-project/*.md",
-]
-"memorywiki/examples/demo-project/.agent_memory/project" = [
-  "examples/demo-project/.agent_memory/project/*.md",
-]
-"memorywiki/examples/demo-project/.agent_memory/project/episodes" = [
-  "examples/demo-project/.agent_memory/project/episodes/*.md",
-]
-"memorywiki/examples/demo-project/.agent_memory/project/retrieval" = [
-  "examples/demo-project/.agent_memory/project/retrieval/*.jsonl",
-]
-"memorywiki/examples/demo-project/.agent_memory/project/semantic" = [
-  "examples/demo-project/.agent_memory/project/semantic/*.md",
-]
-"memorywiki/examples/demo-project/.agent_memory/project/sessions" = [
-  "examples/demo-project/.agent_memory/project/sessions/*.md",
-]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+markers = [
+  "unit: fast logic tests with minimal filesystem use",
+  "integration: tests that exercise CLI, subprocesses, MCP, or filesystem lifecycles",
+  "slow: tests that may take more than one second",
+  "smoke: end-to-end smoke tests for release or MCP surfaces",
+]
 
 [tool.coverage.run]
 branch = false
@@ -179,19 +116,25 @@ omit = [
 ]
 
 [tool.coverage.report]
+fail_under = 80
 skip_empty = true
 show_missing = true
 
 [tool.setuptools]
+include-package-data = true
 py-modules = [
   "agent_leases",
   "agents_review_prompt",
   "demo_chat",
   "generate_wake_prompt",
   "memory_backup",
+  "memory_capture_ingest",
+  "memory_construction",
   "memory_crystallize",
   "memory_crystallize_candidates",
   "memorywiki_config",
+  "memorywiki_construction_report",
+  "memorywiki_context",
   "memory_feedback",
   "memory_forget",
   "memory_health",
@@ -203,6 +146,8 @@ py-modules = [
   "memory_review",
   "memory_timeline",
   "memorywiki_cross_project_install",
+  "memorywiki_export",
+  "memorywiki_file_history",
   "memorywiki_knowledge_ops",
   "memorywiki_mcp_contract",
   "memorywiki_mcp_doctor",
@@ -213,6 +158,7 @@ py-modules = [
   "memorywiki_release_check",
   "memorywiki_release_manifest",
   "memorywiki_restore_check",
+  "memorywiki_status",
   "merge_episodes",
   "mw_cli",
   "project_agents",

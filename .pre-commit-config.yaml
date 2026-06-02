@@ -8,8 +8,8 @@ repos:
         pass_filenames: false
         types_or: [python, pyi]
       - id: mypy-memorywiki-mcp
-        name: mypy MemoryWiki MCP surface
-        entry: python3 -m mypy memorywiki_list.py memorywiki_mcp/schema.py memorywiki_mcp/server.py memorywiki_mcp_contract.py --follow-imports=silent
+        name: mypy MemoryWiki core and MCP
+        entry: python3 -m mypy memory_system memorywiki_mcp --follow-imports=silent
         language: system
         pass_filenames: false
         types_or: [python, pyi]

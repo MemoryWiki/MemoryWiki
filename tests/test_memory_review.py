@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 
 import pytest
+from conftest import make_memory_store as _store
 
+from memory_construction import run_construction_report
 from memory_crystallize_candidates import propose_candidates
 from memory_feedback import append_feedback
 from memory_review import (
@@ -20,18 +22,8 @@ from memory_review import (
     write_golden_candidates_to_pending,
 )
 from memory_system.models import SemanticMemory, SessionFile
-from memory_system.paths import MemoryScopePaths
-from memory_system.store import ScopedMemoryStore
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _store(root: Path) -> ScopedMemoryStore:
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, "project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
 
 
 def _seed_candidate(root: Path) -> str:
@@ -61,6 +53,12 @@ def _seed_candidate(root: Path) -> str:
 def test_memory_review_summarizes_health_feedback_and_pending_candidates(tmp_path):
     project = tmp_path / "project"
     candidate_id = _seed_candidate(project)
+    run_construction_report(
+        project_root=project,
+        global_root=tmp_path / "global",
+        scope="project",
+        write_candidates=True,
+    )
     append_feedback(
         root=project,
         query="MemoryWiki review workbench",
@@ -81,6 +79,7 @@ def test_memory_review_summarizes_health_feedback_and_pending_candidates(tmp_pat
     assert payload["status"] == "review"
     assert payload["pending_candidate_count"] >= 1
     assert payload["pending_candidates"][0]["id"] == candidate_id
+    assert payload["construction_candidate_count"] >= 1
     assert payload["feedback_count"] == 1
     assert payload["golden_proposals"][0]["expected"] == ["memorywiki-review-workbench"]
     assert payload["apply"] is None
@@ -89,6 +88,12 @@ def test_memory_review_summarizes_health_feedback_and_pending_candidates(tmp_pat
 def test_memory_review_builds_unified_review_inbox(tmp_path):
     project = tmp_path / "project"
     candidate_id = _seed_candidate(project)
+    run_construction_report(
+        project_root=project,
+        global_root=tmp_path / "global",
+        scope="project",
+        write_candidates=True,
+    )
     _store(project).write_semantic_memory(
         SemanticMemory(
             id="weak",
@@ -124,6 +129,7 @@ def test_memory_review_builds_unified_review_inbox(tmp_path):
         "health",
         "feedback",
         "crystallize-candidate",
+        "construction-topic-bundle",
         "golden-eval",
         "health-repair",
     }.issubset(categories)

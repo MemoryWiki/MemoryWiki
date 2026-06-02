@@ -2,10 +2,12 @@
 
 ## Start Read-Only
 
-Begin each session with read-only index maintenance and recall:
+Begin each session with read-only index maintenance, a profile-first context
+capsule, and then focused recall only when needed:
 
 ```bash
 memorywiki-index-maintain --project-root .agent_memory/project --scope project
+memorywiki-context --project-root .agent_memory/project --scope project --mode startup
 memorywiki-recall --project-root .agent_memory/project --scope project --query "status next steps"
 ```
 
@@ -18,6 +20,15 @@ Use project memory for project-specific state. Use global memory only for stable
 ## Crystallize Deliberately
 
 Do not save every chat turn. Save durable decisions, reusable workflows, and source-backed knowledge.
+
+Before crystallizing a large session or source set, run a construction report:
+
+```bash
+memorywiki-construction-report --project-root .agent_memory/project --scope project --format markdown
+```
+
+Use `--write-candidates` only when you want a pending topic bundle queue for
+review. The queue is still a proposal surface, not accepted memory.
 
 Good semantic memory:
 

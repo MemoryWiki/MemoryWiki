@@ -4,21 +4,13 @@ import subprocess
 import sys
 from pathlib import Path
 
+from conftest import make_memory_store as _store
+
 from agent_leases import acquire_lease
 from memory_system.models import SemanticMemory
-from memory_system.paths import MemoryScopePaths
 from memory_system.retrieval_index import local_embedding_for_index, term_counts_for_index
-from memory_system.store import ScopedMemoryStore
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _store(root, scope="project"):
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, scope=scope),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
 
 
 def _write_semantic(root, scope, memory_id, content):

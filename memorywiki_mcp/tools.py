@@ -9,7 +9,7 @@ from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 MEMORYWIKI_ROOT = Path(__file__).resolve().parents[1]
 if str(MEMORYWIKI_ROOT) not in sys.path:
@@ -17,6 +17,7 @@ if str(MEMORYWIKI_ROOT) not in sys.path:
 
 from memory_index_maintain import maintain_indexes
 from memory_recall import recall as recall_memory
+from memorywiki_context import build_context
 from memory_system.models import (
     AuditEntry,
     EpisodeFile,
@@ -42,6 +43,8 @@ from memorywiki_mcp.safety import (
 from memorywiki_mcp.schema import (
     CrystallizeInput,
     CrystallizeOutput,
+    ContextInput,
+    ContextOutput,
     ForgetInput,
     ForgetOutput,
     IndexMaintainInput,
@@ -227,7 +230,9 @@ def _target_path_for_paths(paths: MemoryScopePaths, kind: str, identifier: str) 
 
 
 def _frontmatter_for_semantic(item: SemanticMemory) -> dict[str, Any]:
-    return safe_json(
+    return cast(
+        dict[str, Any],
+        safe_json(
         {
             "id": item.id,
             "scope": item.scope,
@@ -240,11 +245,14 @@ def _frontmatter_for_semantic(item: SemanticMemory) -> dict[str, Any]:
             "updated_at": item.updated_at,
             "source_refs": _source_refs_output(item.source_refs),
         }
+        ),
     )
 
 
 def _frontmatter_for_procedure(item: ProceduralMemory) -> dict[str, Any]:
-    return safe_json(
+    return cast(
+        dict[str, Any],
+        safe_json(
         {
             "id": item.id,
             "scope": item.scope,
@@ -258,22 +266,26 @@ def _frontmatter_for_procedure(item: ProceduralMemory) -> dict[str, Any]:
             "updated_at": item.updated_at,
             "source_refs": _source_refs_output(item.source_refs),
         }
+        ),
     )
 
 
 def _frontmatter_for_session(item: SessionFile) -> dict[str, Any]:
     frontmatter = asdict(item)
     frontmatter.pop("body", None)
-    return safe_json(frontmatter)
+    return cast(dict[str, Any], safe_json(frontmatter))
 
 
 def _frontmatter_for_episode(item: EpisodeFile) -> dict[str, Any]:
-    return safe_json(
+    return cast(
+        dict[str, Any],
+        safe_json(
         {
             "date": item.date,
             "scope": item.scope,
             "sessions": [asdict(session) for session in item.sessions],
         }
+        ),
     )
 
 
@@ -308,40 +320,40 @@ def memorywiki_read_memory(input_model: ReadMemoryInput) -> ReadMemoryOutput:
     if kind == "semantic":
         if not identifier:
             raise ValueError("identifier is required for semantic memory")
-        item = store.read_semantic_memory(identifier)
-        if item is None:
+        semantic_item = store.read_semantic_memory(identifier)
+        if semantic_item is None:
             return ReadMemoryOutput(found=False, scope=scope, kind=kind, identifier=identifier)
-        content = item.content
-        frontmatter = _frontmatter_for_semantic(item)
-        update_log = _text_list_output(item.update_log)
-        found_identifier = item.id
+        content = semantic_item.content
+        frontmatter = _frontmatter_for_semantic(semantic_item)
+        update_log = _text_list_output(semantic_item.update_log)
+        found_identifier = semantic_item.id
     elif kind == "procedural":
         if not identifier:
             raise ValueError("identifier is required for procedural memory")
-        item = store.read_procedural_memory(identifier)
-        if item is None:
+        procedure_item = store.read_procedural_memory(identifier)
+        if procedure_item is None:
             return ReadMemoryOutput(found=False, scope=scope, kind=kind, identifier=identifier)
-        content = "\n".join([item.trigger] + item.steps)
-        frontmatter = _frontmatter_for_procedure(item)
-        found_identifier = item.id
+        content = "\n".join([procedure_item.trigger] + procedure_item.steps)
+        frontmatter = _frontmatter_for_procedure(procedure_item)
+        found_identifier = procedure_item.id
     elif kind == "session":
         if not identifier:
             raise ValueError("identifier is required for session memory")
-        item = store.read_session(identifier)
-        if item is None:
+        session_item = store.read_session(identifier)
+        if session_item is None:
             return ReadMemoryOutput(found=False, scope=scope, kind=kind, identifier=identifier)
-        content = item.body
-        frontmatter = _frontmatter_for_session(item)
-        found_identifier = item.id
+        content = session_item.body
+        frontmatter = _frontmatter_for_session(session_item)
+        found_identifier = session_item.id
     elif kind == "episode":
         if not identifier:
             raise ValueError("identifier is required for episode memory")
-        item = store.read_episode(identifier)
-        if item is None:
+        episode_item = store.read_episode(identifier)
+        if episode_item is None:
             return ReadMemoryOutput(found=False, scope=scope, kind=kind, identifier=identifier)
-        content = item.body
-        frontmatter = _frontmatter_for_episode(item)
-        found_identifier = item.date
+        content = episode_item.body
+        frontmatter = _frontmatter_for_episode(episode_item)
+        found_identifier = episode_item.date
     elif kind in {"core", "user", "index", "project_profile"}:
         hot = _read_hot_file(store, kind)
         if hot is None:
@@ -381,6 +393,8 @@ def memorywiki_recall(input_model: RecallInput) -> RecallOutput:
         embedding=input_model.embedding,
         graph=input_model.graph,
         ranker=input_model.ranker,
+        granularity_router=input_model.granularity_router,
+        association_reranker=input_model.association_reranker,
         strategy=input_model.strategy,
         refresh_index_if_needed=input_model.refresh_index_if_needed,
     )
@@ -409,6 +423,34 @@ def memorywiki_recall(input_model: RecallInput) -> RecallOutput:
         warnings=[safe_output_text(warning) for warning in result.warnings],
         hits=hits,
     )
+
+
+def memorywiki_context(input_model: ContextInput) -> ContextOutput:
+    screen_tool_input("memorywiki_context", input_model.model_dump())
+    if input_model.refresh_index_if_needed:
+        if input_model.scope in ("global", "all"):
+            require_mcp_write_enabled(scope="global")
+        else:
+            require_mcp_write_enabled(scope="project")
+    payload = build_context(
+        project_root=resolve_project_root(input_model.project_root),
+        global_root=resolve_global_root(input_model.global_root),
+        scope=input_model.scope,
+        mode=input_model.mode,
+        query=input_model.query or "",
+        limit=input_model.limit,
+        token_budget=input_model.token_budget,
+        max_chars=input_model.max_chars,
+        include_recall=input_model.include_recall,
+        include_health=input_model.include_health,
+        include_actions=input_model.include_actions,
+        include_excerpts=input_model.include_excerpts,
+        embedding=input_model.embedding,
+        graph=input_model.graph,
+        strategy=input_model.strategy,
+        refresh_index_if_needed=input_model.refresh_index_if_needed,
+    )
+    return ContextOutput(**safe_json(payload))
 
 
 def memorywiki_list(input_model: ListInput) -> ListOutput:
@@ -554,15 +596,21 @@ def memorywiki_crystallize(input_model: CrystallizeInput) -> CrystallizeOutput:
         replaced = existing is not None
         if existing is not None and not input_model.replace:
             raise ValueError(f"semantic memory already exists; set replace=true: {input_model.id}")
-        item = SemanticMemory(
+        semantic_refs = refs
+        if existing is not None:
+            store_for_merge = require_scoped_store(
+                store,
+                root=root,
+                operation="memorywiki_crystallize semantic merge",
+            )
+            semantic_refs = store_for_merge._merge_source_refs(existing.source_refs, refs)
+        semantic_item = SemanticMemory(
             id=input_model.id,
             scope=input_model.scope,
             title=input_model.title,
             content=input_model.content,
             concepts=input_model.concepts,
-            source_refs=refs
-            if existing is None
-            else store._merge_source_refs(existing.source_refs, refs),
+            source_refs=semantic_refs,
             confidence=input_model.confidence,
             strength=input_model.strength,
             last_accessed=None,
@@ -582,30 +630,41 @@ def memorywiki_crystallize(input_model: CrystallizeInput) -> CrystallizeOutput:
                 operation="memorywiki_crystallize semantic write",
             )
             _assert_mcp_audit_ready(store)
-            store.write_semantic_memory(item)
+            store.write_semantic_memory(semantic_item)
     else:
-        existing = store.read_procedural_memory(input_model.id) if store is not None else None
-        replaced = existing is not None
-        if existing is not None and not input_model.replace:
+        procedural_existing = (
+            store.read_procedural_memory(input_model.id) if store is not None else None
+        )
+        replaced = procedural_existing is not None
+        if procedural_existing is not None and not input_model.replace:
             raise ValueError(f"procedure already exists; set replace=true: {input_model.id}")
+        procedure_refs = refs
+        if procedural_existing is not None:
+            store_for_merge = require_scoped_store(
+                store,
+                root=root,
+                operation="memorywiki_crystallize procedure merge",
+            )
+            procedure_refs = store_for_merge._merge_source_refs(
+                procedural_existing.source_refs,
+                refs,
+            )
         steps = input_model.steps or [
             line.strip("- ").strip()
             for line in input_model.content.splitlines()
             if line.strip()
         ]
-        item = ProceduralMemory(
+        procedure_item = ProceduralMemory(
             id=input_model.id,
             scope=input_model.scope,
             title=input_model.title,
             trigger=input_model.trigger or input_model.content[:240],
             steps=steps,
-            source_refs=refs
-            if existing is None
-            else store._merge_source_refs(existing.source_refs, refs),
+            source_refs=procedure_refs,
             confidence=input_model.confidence,
             strength=input_model.strength,
             last_accessed=None,
-            created_at=existing.created_at if existing else timestamp,
+            created_at=procedural_existing.created_at if procedural_existing else timestamp,
             updated_at=timestamp,
         )
         if not input_model.dry_run:
@@ -615,7 +674,7 @@ def memorywiki_crystallize(input_model: CrystallizeInput) -> CrystallizeOutput:
                 operation="memorywiki_crystallize procedure write",
             )
             _assert_mcp_audit_ready(store)
-            store.write_procedural_memory(item)
+            store.write_procedural_memory(procedure_item)
 
     if not input_model.dry_run:
         store = require_scoped_store(
@@ -751,7 +810,7 @@ def memorywiki_ingest_source(input_model: IngestSourceInput) -> IngestSourceOutp
         update_log = list(existing.update_log) if existing else []
         if existing:
             update_log.append(f"{timestamp} Update: Refreshed from {ref.path}")
-        item = SemanticMemory(
+        semantic_item = SemanticMemory(
             id=input_model.id,
             scope=input_model.scope,
             title=input_model.title,
@@ -767,11 +826,11 @@ def memorywiki_ingest_source(input_model: IngestSourceInput) -> IngestSourceOutp
         )
         affected_paths.append(f"semantic/{input_model.id}.md")
         if not input_model.dry_run:
-            store.write_semantic_memory(item)
+            store.write_semantic_memory(semantic_item)
     else:
         if not input_model.id or not input_model.title:
             raise ValueError("id and title are required for procedure source ingest")
-        item = ProceduralMemory(
+        procedure_item = ProceduralMemory(
             id=input_model.id,
             scope=input_model.scope,
             title=input_model.title,
@@ -786,7 +845,7 @@ def memorywiki_ingest_source(input_model: IngestSourceInput) -> IngestSourceOutp
         )
         affected_paths.append(f"procedures/{input_model.id}.md")
         if not input_model.dry_run:
-            store.write_procedural_memory(item)
+            store.write_procedural_memory(procedure_item)
 
     if not input_model.dry_run:
         ledger_row = {

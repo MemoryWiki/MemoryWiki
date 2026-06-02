@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 CORE_MEMORY_TEMPLATE = """# Core Memory
 
@@ -28,7 +28,10 @@ INDEX_TEMPLATE = """# Memory Index
 
 
 def read_core_memory(store: Any) -> str:
-    return store._sanitize(store._read_or_create(store.paths.core_memory, CORE_MEMORY_TEMPLATE))
+    return cast(
+        str,
+        store._sanitize(store._read_or_create(store.paths.core_memory, CORE_MEMORY_TEMPLATE)),
+    )
 
 
 def write_core_memory(store: Any, content: str) -> None:
@@ -40,7 +43,10 @@ def write_core_memory(store: Any, content: str) -> None:
 
 
 def read_user_memory(store: Any) -> str:
-    return store._sanitize(store._read_or_create(store.paths.user_memory, USER_MEMORY_TEMPLATE))
+    return cast(
+        str,
+        store._sanitize(store._read_or_create(store.paths.user_memory, USER_MEMORY_TEMPLATE)),
+    )
 
 
 def write_user_memory(store: Any, content: str) -> None:
@@ -54,7 +60,7 @@ def write_user_memory(store: Any, content: str) -> None:
 def read_index(store: Any) -> str:
     if not store.paths.index.exists() or store._index_is_dirty():
         store.refresh_index(force=False)
-    return store._sanitize(store._read_or_create(store.paths.index, INDEX_TEMPLATE))
+    return cast(str, store._sanitize(store._read_or_create(store.paths.index, INDEX_TEMPLATE)))
 
 
 def refresh_index(store: Any, force: bool = True) -> None:
@@ -63,7 +69,7 @@ def refresh_index(store: Any, force: bool = True) -> None:
 
 
 def append_episodic(store: Any, date_text: str, section_markdown: str) -> Path:
-    path = store.paths.episodic_for_date(date_text)
+    path = cast(Path, store.paths.episodic_for_date(date_text))
     with store._file_lock():
         if not path.exists():
             store._atomic_write_text_unlocked(path, f"# {date_text} Episodic Memory\n\n")
@@ -79,4 +85,4 @@ def read_episodic(store: Any, date_text: str) -> str:
     store._assert_safe_managed_path(path)
     if not path.exists():
         return f"# {date_text} Episodic Memory\n"
-    return store._sanitize(store._read_text_bounded(path))
+    return cast(str, store._sanitize(store._read_text_bounded(path)))

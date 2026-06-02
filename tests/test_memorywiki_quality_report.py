@@ -6,23 +6,15 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from conftest import make_memory_store as _store
+
 from memory_feedback import append_feedback
 from memory_review import write_golden_candidates_to_pending
 from memory_system.models import SemanticMemory
-from memory_system.paths import MemoryScopePaths
-from memory_system.store import ScopedMemoryStore
 from memorywiki_quality_report import run_quality_report
 from retrieval_golden_eval import RetrievalCase
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-
-
-def _store(root: Path) -> ScopedMemoryStore:
-    return ScopedMemoryStore(
-        MemoryScopePaths.from_root(root, "project"),
-        sanitize_on_write=True,
-        secure_permissions=False,
-    )
 
 
 def test_quality_report_aggregates_health_feedback_freshness_and_golden_eval(tmp_path):

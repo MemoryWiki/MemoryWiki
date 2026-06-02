@@ -103,8 +103,11 @@ def test_knowledge_ops_returns_five_loops_and_read_only_candidates(tmp_path):
         "operator-ux",
     ]
     assert payload["knowledge_candidates"]["candidate_count"] >= 1
+    assert payload["construction_report"]["schema"] == "memorywiki-construction-report-v1"
+    assert payload["loops"][0]["signals"]["construction_candidate_count"] >= 1
     assert not (project / "_pending" / "crystallize-candidates.jsonl").exists()
     knowledge = payload["loops"][0]
+    assert any("memorywiki_construction_report.py" in item["command"] for item in knowledge["actions"])
     assert any("memory_crystallize_candidates.py" in item["command"] for item in knowledge["actions"])
     assert any(item["write_required"] and "--write" in item["command"] for item in knowledge["actions"])
     assert "# MemoryWiki Knowledge Ops" in markdown

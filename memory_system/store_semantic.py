@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from memory_system.models import SemanticMemory, SourceRef
 
 
 def write_semantic_memory(store: Any, item: SemanticMemory) -> Path:
-    path = store.paths.semantic_file(item.id)
+    path = cast(Path, store.paths.semantic_file(item.id))
     content = store._serialize_semantic_memory(item)
     with store._file_lock():
         store._atomic_write_text_unlocked(path, content)
@@ -23,10 +23,10 @@ def read_semantic_memory(store: Any, memory_id: str) -> SemanticMemory | None:
     store._assert_safe_managed_path(path)
     if not path.exists():
         return None
-    return store._parse_semantic_memory(
+    return cast(SemanticMemory, store._parse_semantic_memory(
         store._sanitize(store._read_text_bounded(path)),
         fallback_id=memory_id,
-    )
+    ))
 
 
 def list_semantic_memories(store: Any, limit: int = 100) -> list[SemanticMemory]:
@@ -73,7 +73,7 @@ def append_semantic_update_log(
     )
     item.source_refs = store._merge_source_refs(item.source_refs, refs)
     item.updated_at = timestamp
-    return store.write_semantic_memory(item)
+    return cast(Path, store.write_semantic_memory(item))
 
 
 def delete_semantic_memory(store: Any, memory_id: str) -> bool:

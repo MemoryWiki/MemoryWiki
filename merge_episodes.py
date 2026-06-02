@@ -92,7 +92,7 @@ def merge_episodes(
     return imported
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="Merge flat cowork daily memory files into v2 episodes/"
     )
@@ -100,7 +100,7 @@ def main() -> None:
     parser.add_argument("--dst", required=True, help="Destination memory scope root")
     parser.add_argument("--scope", choices=["global", "project"], default="global")
     parser.add_argument("--dry-run", action="store_true")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     imported = merge_episodes(
         src_dir=args.src,
