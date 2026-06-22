@@ -20,11 +20,62 @@ jobs:
           cache: pip
       - name: Install release tooling
         run: python -m pip install -r requirements-dev.txt -e ".[mcp]"
+      - name: Public-clean scan
+        run: python -m pytest tests/test_public_clean.py -q
       - name: Test
         run: python -m pytest tests -q
       - name: Build
         run: python -m build
       - name: Check metadata
         run: python -m twine check dist/*
+      - name: Scan built artifacts for private material
+        run: |
+          python - <<'PY'
+          import pathlib
+          import runpy
+          import tarfile
+          import zipfile
+
+          ns = runpy.run_path("tests/test_public_clean.py")
+          forbidden_markers = [marker.encode("utf-8") for marker in ns["FORBIDDEN_MARKERS"]]
+          secret_patterns = ns["SECRET_PATTERNS"]
+          offenders = []
+
+          def scan_member(artifact, name, data):
+              parts = pathlib.PurePosixPath(name).parts
+              if name.startswith("/") or ".." in parts:
+                  offenders.append(f"{artifact}:{name} has unsafe archive path")
+                  return
+              if name.endswith("tests/test_public_clean.py"):
+                  return
+              for marker in forbidden_markers:
+                  if marker in data:
+                      offenders.append(f"{artifact}:{name} contains forbidden marker")
+              for pattern in secret_patterns:
+                  if pattern.search(data):
+                      offenders.append(f"{artifact}:{name} contains secret-like material")
+
+          for artifact in pathlib.Path("dist").iterdir():
+              if artifact.suffix == ".whl":
+                  with zipfile.ZipFile(artifact) as archive:
+                      for name in archive.namelist():
+                          if name.endswith("/"):
+                              continue
+                          scan_member(artifact, name, archive.read(name))
+              elif artifact.name.endswith(".tar.gz"):
+                  with tarfile.open(artifact, "r:gz") as archive:
+                      for member in archive.getmembers():
+                          if not member.isfile():
+                              continue
+                          handle = archive.extractfile(member)
+                          if handle is not None:
+                              scan_member(artifact, member.name, handle.read())
+              else:
+                  offenders.append(f"{artifact} has unexpected artifact extension")
+
+          if offenders:
+              raise SystemExit("\n".join(offenders))
+          print("Built artifact scan passed.")
+          PY
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@ecacc565f52d97f9c539ea14a6e5b5d06b9c5045 # release/v1

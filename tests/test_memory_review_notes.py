@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 def test_review_followup_notes_record_deferred_architecture_items():
-    text = Path("docs/internal/memory_review_followups.md").read_text(
+    text = Path("docs/roadmap/memory-review-followups.md").read_text(
         encoding="utf-8"
     )
 

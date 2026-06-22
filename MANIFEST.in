@@ -3,6 +3,8 @@ include pyproject.toml
 recursive-include docs *
 recursive-include examples *
 recursive-include benchmarks *
+recursive-exclude docs/internal *
+recursive-exclude examples */retrieval/*.jsonl
 recursive-exclude * __pycache__ *.py[cod] .DS_Store
 prune examples/memory-root/agent_slots
 prune .git
